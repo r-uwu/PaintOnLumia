@@ -3,39 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>초대형 픽셀 캔버스 프로토타입</title>
+    <title>PaintOnLumia - 프로토타입</title>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #222; color: white; font-family: sans-serif; }
-
-        /* 화면 전체를 차지하는 실제 보이는 캔버스 */
         #displayCanvas { display: block; cursor: crosshair; }
-
-        /* UI 컨트롤 영역 */
-        #ui { position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 8px; pointer-events: auto; user-select: none; }
+        #ui { position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 8px; pointer-events: auto; user-select: none; z-index: 10; }
         .control-group { margin-bottom: 8px; }
         label { display: inline-block; width: 60px; font-size: 12px; }
         input[type="color"] { border: none; width: 40px; height: 25px; cursor: pointer; vertical-align: middle;}
-
-
-        /* 팔레트 컨테이너 및 버튼 스타일 */
-        #palette {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            width: 140px; /* UI 너비에 맞춰 조절 */
-            margin-top: 5px;
-        }
-        .palette-btn {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            cursor: pointer;
-            border: 1px solid #555;
-            transition: transform 0.1s;
-        }
-        .palette-btn:hover {
-            transform: scale(1.2);
-        }
+        #palette { display: flex; flex-wrap: wrap; gap: 4px; width: 140px; margin-top: 5px; }
+        .palette-btn { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 1px solid #555; transition: transform 0.1s; }
+        .palette-btn:hover { transform: scale(1.2); }
+        .progress-container { width: 100%; background-color: #555; height: 6px; margin-top: 5px; border-radius: 3px; overflow: hidden; }
+        .progress-bar { width: 100%; background-color: #32CD32; height: 100%; transition: width 0.1s linear; }
     </style>
 </head>
 <body>
@@ -47,225 +27,159 @@
         <label>색상:</label>
         <input type="color" id="colorPicker" value="#FF4500">
     </div>
-    <div class="control-group" id="palette">
+    <div class="control-group">
+        <label>두께:</label>
+        <input type="range" id="brushSize" min="1" max="10" value="1">
+        <span id="brushSizeVal">1</span>px
     </div>
-    <div class="control-group" style="font-size: 11px">
+    <div class="control-group" id="palette"></div>
+
+    <div class="control-group" style="font-weight: bold; color: #32CD32;">
+        남은 픽셀: <span id="quotaDisplay"></span> / <span id="maxQuotaDisplay"></span>
+        <div class="progress-container">
+            <div id="regenProgressBar" class="progress-bar"></div>
+        </div>
+        <div style="font-size: 10px; color: #aaa; text-align: right; margin-top: 2px;">
+            다음 충전: <span id="regenTimeDisplay">0.0</span>초
+        </div>
+    </div>
+
+    <div class="control-group" style="font-size: 11px; margin-top:10px;">
         <div>좌표: <span id="coords">0, 0</span></div>
         <div>줌: <span id="zoomLevel">1.0</span>x</div>
-        <div style="margin-top:5px; color: #aaa;">[조작] <br>드래그: 픽셀 그리기<br>우클릭 드래그: 화면 이동<br>휠: 확대/축소</div>
+        <div style="color:#aaa; margin-top:5px;">Ctrl+Z: 실행 취소</div>
     </div>
 </div>
 
 <script>
-    // --- 설정 및 상수 ---
-    const MAP_SIZE = 2000; // 도화지 크기 (2000x2000)
+    // --- 1. 환경 설정 ---
+    const CONFIG = {
+        MAP_SIZE: 2000,
+        MAX_QUOTA: 1000,
+        REGEN_TIME_MS: 10000,
+        PALETTE_COLORS: ['#FFFFFF', '#000000', '#FF4500', '#1E90FF', '#32CD32', '#FFD700', '#FF69B4', '#8A2BE2']
+    };
 
-    // --- 상태 변수 ---
-    let currentColor = "#FF4500";
+    // --- 2. 상태 변수 ---
+    let currentColor = CONFIG.PALETTE_COLORS[2];
+    let currentSize = 1;
+    let currentQuota = CONFIG.MAX_QUOTA;
+    let lastRegenTime = Date.now();
 
-    // 카메라/뷰포트 상태
-    let camX = MAP_SIZE / 2; // 카메라가 바라보는 중심 X (초기값: 맵 중앙)
-    let camY = MAP_SIZE / 2; // 카메라가 바라보는 중심 Y
-    let zoom = 1.0;          // 확대 배율
-    const MIN_ZOOM = 0.5;    // 최소 축소 (맵 전체가 다 보일 정도)
-    const MAX_ZOOM = 50.0;   // 최대 확대
+    let camX = CONFIG.MAP_SIZE / 2;
+    let camY = CONFIG.MAP_SIZE / 2;
+    let zoom = 1.0;
 
-    // 마우스 상호작용 상태
     let isDrawing = false;
     let isPanning = false;
-    let lastMouseX = 0;
-    let lastMouseY = 0;
+    let lastMouseX = 0, lastMouseY = 0;
+    let lastMapX = null, lastMapY = null;
 
-    // --- HTML 요소 및 컨텍스트 ---
+    // Undo 관련 상태
+    const MAX_UNDO_STACK = 10;
+    let undoHistory = [];
+    let currentAction = null;
+    let currentStrokeCoords = new Set();
+
+    // --- 3. DOM 요소 및 컨텍스트 세팅 ---
     const displayCanvas = document.getElementById('displayCanvas');
-    const displayCtx = displayCanvas.getContext('2d', { alpha: false }); // 성능을 위해 알파 채널 비활성화
-    const colorPicker = document.getElementById('colorPicker');
-    const coordsDisplay = document.getElementById('coords');
-    const zoomDisplay = document.getElementById('zoomLevel');
+    const displayCtx = displayCanvas.getContext('2d', { alpha: false });
 
-    // --- Back Buffer (메모리 캔버스) 생성 및 초기화 ---
-    // 실제 2000x2000 데이터는 여기에 존재합니다.
     const backCanvas = document.createElement('canvas');
-    backCanvas.width = MAP_SIZE;
-    backCanvas.height = MAP_SIZE;
-    const backCtx = backCanvas.getContext('2d', { alpha: false });
+    backCanvas.width = CONFIG.MAP_SIZE;
+    backCanvas.height = CONFIG.MAP_SIZE;
+    // 경고 해결: willReadFrequently 옵션 추가
+    const backCtx = backCanvas.getContext('2d', { alpha: false, willReadFrequently: true });
 
-    // 메모리 캔버스 초기 배경을 흰색으로 채움
     backCtx.fillStyle = '#FFFFFF';
-    backCtx.fillRect(0, 0, MAP_SIZE, MAP_SIZE);
+    backCtx.fillRect(0, 0, CONFIG.MAP_SIZE, CONFIG.MAP_SIZE);
 
-    // --- 핵심 함수: 렌더링 (화면 그리기) ---
+    const uiElements = {
+        colorPicker: document.getElementById('colorPicker'),
+        brushSizeInput: document.getElementById('brushSize'),
+        brushSizeVal: document.getElementById('brushSizeVal'),
+        quotaDisplay: document.getElementById('quotaDisplay'),
+        maxQuotaDisplay: document.getElementById('maxQuotaDisplay'),
+        regenProgressBar: document.getElementById('regenProgressBar'),
+        regenTimeDisplay: document.getElementById('regenTimeDisplay'),
+        paletteContainer: document.getElementById('palette'),
+        coordsDisplay: document.getElementById('coords'),
+        zoomDisplay: document.getElementById('zoomLevel')
+    };
+
+    uiElements.maxQuotaDisplay.textContent = CONFIG.MAX_QUOTA;
+    uiElements.colorPicker.value = currentColor;
+
+    // --- 4. 핵심 로직 함수 (순서 중요) ---
+
+    // UI 업데이트 함수 (ReferenceError 해결)
+    function updateQuotaUI() {
+        uiElements.quotaDisplay.textContent = currentQuota;
+        uiElements.quotaDisplay.style.color = (currentQuota <= 0) ? 'red' : '#32CD32';
+    }
+    updateQuotaUI(); // 초기화
+
     function render() {
-        // 1. 화면 캔버스 크기를 브라우저 창 크기에 맞춤
         displayCanvas.width = window.innerWidth;
         displayCanvas.height = window.innerHeight;
-
-        // 2. 픽셀 아트 스타일을 위한 보간 비활성화 (가장 중요)
         displayCtx.imageSmoothingEnabled = false;
 
-        // 3. 화면을 클리어 (검은색 배경)
         displayCtx.fillStyle = "#222";
         displayCtx.fillRect(0, 0, displayCanvas.width, displayCanvas.height);
 
-        // 4. 뷰포트(수학) 계산
-        // 화면 중앙에 카메라 중심이 오도록 backCanvas를 캔버스에 그릴 위치와 크기를 계산합니다.
-
-        // 메모리 캔버스 상에서 화면 중앙에 보일 지점의 좌표
         const viewW = displayCanvas.width / zoom;
         const viewH = displayCanvas.height / zoom;
-
-        // 메모리 캔버스에서 잘라낼 영역의 좌상단 (Source)
         const sx = camX - viewW / 2;
         const sy = camY - viewH / 2;
 
-        // 화면 캔버스에 그려질 영역 (Destination)
-        const dx = 0;
-        const dy = 0;
-        const dw = displayCanvas.width;
-        const dh = displayCanvas.height;
-
-        // 5. Back Buffer -> Front Buffer 복사
-        // drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
-        displayCtx.drawImage(backCanvas, sx, sy, viewW, viewH, dx, dy, dw, dh);
-
-        // UI 업데이트
-        zoomDisplay.textContent = zoom.toFixed(1);
+        displayCtx.drawImage(backCanvas, sx, sy, viewW, viewH, 0, 0, displayCanvas.width, displayCanvas.height);
+        uiElements.zoomDisplay.textContent = zoom.toFixed(1);
     }
 
-    // 팔레트
-    const paletteColors = ['#FFFFFF', '#000000', '#FF4500', '#1E90FF', '#32CD32', '#FFD700', '#FF69B4', '#8A2BE2'];
-    const paletteContainer = document.getElementById('palette'); // UI 영역에 추가 필요
-
-    paletteColors.forEach(color => {
-        const btn = document.createElement('div');
-        btn.style.backgroundColor = color;
-        btn.className = 'palette-btn';
-        btn.onclick = () => {
-            currentColor = color;
-            colorPicker.value = color; // 기존 컬러피커와 동기화
-        };
-        paletteContainer.appendChild(btn);
-    });
-
-    // --- 유틸리티: 화면 좌표를 맵 좌표로 변환 ---
     function screenToMapCoords(screenX, screenY) {
         const viewW = displayCanvas.width / zoom;
         const viewH = displayCanvas.height / zoom;
-
-        // 맵 좌상단 시점
-        const topLeftX = camX - viewW / 2;
-        const topLeftY = camY - viewH / 2;
-
-        const mapX = Math.floor(topLeftX + (screenX / zoom));
-        const mapY = Math.floor(topLeftY + (screenY / zoom));
-
-        return { x: mapX, y: mapY };
+        return {
+            x: Math.floor((camX - viewW / 2) + (screenX / zoom)),
+            y: Math.floor((camY - viewH / 2) + (screenY / zoom))
+        };
     }
 
-    // --- 기능 함수: 픽셀 칠하기 (로컬 & 멀티플레이어 공통 로직) ---
     function setPixel(x, y, color) {
-        // 도화지 경계 검사
-        if (x < 0 || x >= MAP_SIZE || y < 0 || y >= MAP_SIZE) return;
+        if (x < 0 || x >= CONFIG.MAP_SIZE || y < 0 || y >= CONFIG.MAP_SIZE) return;
+        if (currentQuota <= 0) return;
 
-        // 1. **Back Buffer에 그리기** (메모리 상태 업데이트)
+        const offset = Math.floor(currentSize / 2);
+        const startX = x - offset;
+        const startY = y - offset;
+
+        // 1. 중복 렌더링 방지 (쿼터 누수 해결)
+        const coordKey = `${startX},${startY}`;
+        if (currentStrokeCoords.has(coordKey)) return;
+        currentStrokeCoords.add(coordKey);
+
+        // 2. Undo 데이터 수집 (안전하게 oldData 캡처)
+        if (currentAction !== null) {
+            const oldData = backCtx.getImageData(startX, startY, currentSize, currentSize);
+            currentAction.pixels.push({ x: startX, y: startY, oldData: oldData });
+            currentAction.quotaCost++;
+        }
+
+        // 3. 캔버스에 그리기 및 쿼터 차감
         backCtx.fillStyle = color;
-        // 픽셀 하나를 그리는 것이므로 1x1 크기의 사각형을 그립니다.
-        backCtx.fillRect(x, y, 1, 1);
+        backCtx.fillRect(startX, startY, currentSize, currentSize);
 
-        // NOTE: 멀티플레이어 구현 시 이 시점에 서버로 (x, y, color) 정보를 전송합니다.
+        currentQuota--;
+        updateQuotaUI();
     }
 
-    // --- 이벤트 핸들러: UI & 상호작용 ---
-
-    // 색상 변경
-    colorPicker.addEventListener('input', (e) => currentColor = e.target.value);
-
-    // 창 크기 변경 시 리렌더링
-    window.addEventListener('resize', render);
-
-    // 마우스 우클릭 메뉴 방지 (팬 기능을 위해)
-    displayCanvas.addEventListener('contextmenu', e => e.preventDefault());
-
-    // 마우스 다운
-    displayCanvas.addEventListener('mousedown', (e) => {
-        if (e.button === 0) { // 좌클릭: 그리기 시작
-            isDrawing = true;
-            const mapCoords = screenToMapCoords(e.clientX, e.clientY);
-
-            lastMapX = mapCoords.x;
-            lastMapY = mapCoords.y;
-            setPixel(mapCoords.x, mapCoords.y, currentColor);
-
-            render(); // 상태 변경 후 화면 갱신
-        } else if (e.button === 2) { // 우클릭: 팬(화면이동) 시작
-            isPanning = true;
-            lastMouseX = e.clientX;
-            lastMouseY = e.clientY;
-        }
-    });
-
-    // 마우스 이동
-    displayCanvas.addEventListener('mousemove', (e) => {
-        const mapCoords = screenToMapCoords(e.clientX, e.clientY);
-        //coordsDisplay.textContent = `${mapCoords.x}, ${mapCoords.y}`;
-
-        if (isDrawing) { // 그리기 상태
-            drawLine(lastMapX, lastMapY, mapCoords.x, mapCoords.y, currentColor);
-            lastMapX = mapCoords.x;
-            lastMapY = mapCoords.y;
-            render(); // 끊김 없는 그리기를 위해 이동할 때마다 렌더링
-        } else if (isPanning) { // 화면 이동 상태
-            const dx = (e.clientX - lastMouseX) / zoom;
-            const dy = (e.clientY - lastMouseY) / zoom;
-
-            camX -= dx;
-            camY -= dy;
-
-            // 카메라 경계 제한 (도화지 밖으로 너무 나가지 않게)
-            camX = Math.max(0, Math.min(MAP_SIZE, camX));
-            camY = Math.max(0, Math.min(MAP_SIZE, camY));
-
-            lastMouseX = e.clientX;
-            lastMouseY = e.clientY;
-            render();
-        }
-    });
-
-    let lastMapX = null;
-    let lastMapY = null;
-
-    displayCanvas.addEventListener('mousedown', (e) => {
-        if (e.button === 0) {
-            isDrawing = true;
-            const mapCoords = screenToMapCoords(e.clientX, e.clientY);
-            // 시작점 기록
-            lastMapX = mapCoords.x;
-            lastMapY = mapCoords.y;
-            setPixel(mapCoords.x, mapCoords.y, currentColor);
-            render();
-        }
-    });
-
-    displayCanvas.addEventListener('mousemove', (e) => {
-        const mapCoords = screenToMapCoords(e.clientX, e.clientY);
-        if (isDrawing) {
-            // 이전 좌표와 현재 좌표 사이를 보간하여 그리기
-            drawLine(lastMapX, lastMapY, mapCoords.x, mapCoords.y, currentColor);
-            lastMapX = mapCoords.x;
-            lastMapY = mapCoords.y;
-            render();
-        }
-    });
-
-    // 브레젠험(Bresenham) 알고리즘 혹은 단순 선형 보간 적용
     function drawLine(x1, y1, x2, y2, color) {
-        const dx = Math.abs(x2 - x1);
-        const dy = Math.abs(y2 - y1);
-        const sx = (x1 < x2) ? 1 : -1;
-        const sy = (y1 < y2) ? 1 : -1;
+        const dx = Math.abs(x2 - x1), dy = Math.abs(y2 - y1);
+        const sx = (x1 < x2) ? 1 : -1, sy = (y1 < y2) ? 1 : -1;
         let err = dx - dy;
 
         while (true) {
+            if (currentQuota <= 0) break;
             setPixel(x1, y1, color);
             if (x1 === x2 && y1 === y2) break;
             const e2 = 2 * err;
@@ -274,50 +188,154 @@
         }
     }
 
-    // 마우스 업
-    window.addEventListener('mouseup', (e) => {
-        isDrawing = false;
-        isPanning = false;
+    // --- 5. 타이머 및 UI 이벤트 ---
+
+    function updateRegenTimer() {
+        if (currentQuota < CONFIG.MAX_QUOTA) {
+            const now = Date.now();
+            const elapsed = now - lastRegenTime;
+
+            if (elapsed >= CONFIG.REGEN_TIME_MS) {
+                currentQuota++;
+                lastRegenTime = now - (elapsed - CONFIG.REGEN_TIME_MS);
+                updateQuotaUI();
+            }
+
+            const currentElapsed = Date.now() - lastRegenTime;
+            const remaining = Math.max(0, CONFIG.REGEN_TIME_MS - currentElapsed);
+            const progressPercent = (currentElapsed / CONFIG.REGEN_TIME_MS) * 100;
+
+            uiElements.regenProgressBar.style.width = `${progressPercent}%`;
+            uiElements.regenTimeDisplay.textContent = (remaining / 1000).toFixed(1);
+        } else {
+            uiElements.regenProgressBar.style.width = `100%`;
+            uiElements.regenTimeDisplay.textContent = "0.0";
+            lastRegenTime = Date.now();
+        }
+        requestAnimationFrame(updateRegenTimer);
+    }
+    requestAnimationFrame(updateRegenTimer);
+
+    // 팔레트 생성
+    CONFIG.PALETTE_COLORS.forEach(color => {
+        const btn = document.createElement('div');
+        btn.style.backgroundColor = color;
+        btn.className = 'palette-btn';
+        btn.dataset.color = color;
+        if (color === currentColor) btn.style.border = '2px solid #FFF';
+        uiElements.paletteContainer.appendChild(btn);
     });
 
-    // 마우스 휠: 확대/축소
+    uiElements.paletteContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('palette-btn')) {
+            currentColor = e.target.dataset.color;
+            uiElements.colorPicker.value = currentColor;
+            document.querySelectorAll('.palette-btn').forEach(b => b.style.border = '1px solid #555');
+            e.target.style.border = '2px solid #FFF';
+        }
+    });
+
+    uiElements.brushSizeInput.addEventListener('input', (e) => {
+        currentSize = parseInt(e.target.value, 10);
+        uiElements.brushSizeVal.textContent = currentSize;
+    });
+
+    uiElements.colorPicker.addEventListener('input', (e) => {
+        currentColor = e.target.value;
+        document.querySelectorAll('.palette-btn').forEach(b => b.style.border = '1px solid #555');
+    });
+
+    // --- 6. 캔버스 마우스 상호작용 및 Undo ---
+
+    displayCanvas.addEventListener('mousedown', (e) => {
+        const mapCoords = screenToMapCoords(e.clientX, e.clientY);
+        if (e.button === 0) {
+            isDrawing = true;
+            lastMapX = mapCoords.x;
+            lastMapY = mapCoords.y;
+
+            // Undo를 위한 세션 초기화
+            currentStrokeCoords.clear();
+            currentAction = { pixels: [], quotaCost: 0 };
+
+            setPixel(mapCoords.x, mapCoords.y, currentColor);
+            render();
+        } else if (e.button === 2) {
+            isPanning = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        }
+    });
+
+    displayCanvas.addEventListener('mousemove', (e) => {
+        const mapCoords = screenToMapCoords(e.clientX, e.clientY);
+        uiElements.coordsDisplay.textContent = `${mapCoords.x}, ${mapCoords.y}`;
+
+        if (isDrawing) {
+            if (lastMapX === mapCoords.x && lastMapY === mapCoords.y) return; // 위치 변경 없을 시 스킵
+            drawLine(lastMapX, lastMapY, mapCoords.x, mapCoords.y, currentColor);
+            lastMapX = mapCoords.x;
+            lastMapY = mapCoords.y;
+            render();
+        } else if (isPanning) {
+            camX -= (e.clientX - lastMouseX) / zoom;
+            camY -= (e.clientY - lastMouseY) / zoom;
+            camX = Math.max(0, Math.min(CONFIG.MAP_SIZE, camX));
+            camY = Math.max(0, Math.min(CONFIG.MAP_SIZE, camY));
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+            render();
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (isDrawing && currentAction && currentAction.pixels.length > 0) {
+            undoHistory.push(currentAction);
+            if (undoHistory.length > MAX_UNDO_STACK) undoHistory.shift();
+        }
+        isDrawing = false;
+        isPanning = false;
+        currentAction = null;
+    });
+
+    // Undo (Ctrl+Z) 단축키
+    window.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            if (undoHistory.length === 0) return;
+
+            const lastAction = undoHistory.pop();
+
+            // NOTE: 로컬 전용 Undo. 서버 연동 시 타인의 그림을 덮어쓰는 문제가 발생할 수 있음.
+            for (let i = lastAction.pixels.length - 1; i >= 0; i--) {
+                const p = lastAction.pixels[i];
+                backCtx.putImageData(p.oldData, p.x, p.y);
+            }
+
+            currentQuota = Math.min(CONFIG.MAX_QUOTA, currentQuota + lastAction.quotaCost);
+            updateQuotaUI();
+
+            if (currentQuota < CONFIG.MAX_QUOTA) lastRegenTime = Date.now();
+            render();
+        }
+    });
+
     displayCanvas.addEventListener('wheel', (e) => {
         e.preventDefault();
-
-        const zoomFactor = 1.1;
         const oldZoom = zoom;
+        zoom *= (e.deltaY > 0) ? (1 / 1.1) : 1.1;
+        zoom = Math.max(0.5, Math.min(50.0, zoom));
 
-        // 휠 방향에 따라 줌 조절
-        if (e.deltaY > 0) zoom /= zoomFactor; // 축소
-        else zoom *= zoomFactor; // 확대
-
-        // 줌 범위 제한
-        zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
-
-        // 마우스 포인터 위치를 중심으로 확대/축소되도록 카메라 위치 조정
         const mapCoords = screenToMapCoords(e.clientX, e.clientY);
         camX = mapCoords.x + (camX - mapCoords.x) * (oldZoom / zoom);
         camY = mapCoords.y + (camY - mapCoords.y) * (oldZoom / zoom);
-
         render();
     }, { passive: false });
 
-    // --- 멀티플레이어 시뮬레이션 (참고용) ---
-    // 다른 사용자가 픽셀을 칠했다는 소켓 메시지를 받았을 때 호출할 함수 예시
-    function simulateRemoteUserUpdate(x, y, color) {
-        console.log(`원격 사용자 업데이트: ${x}, ${y} -> ${color}`);
-        // 로컬 로직과 동일하게 backCanvas에 그리고 화면을 리렌더링합니다.
-        setPixel(x, y, color);
-        render();
-    }
-    // 예시: 2초 뒤에 중앙에 파란색 점이 생김
-    // setTimeout(() => simulateRemoteUserUpdate(1000, 1000, '#0000FF'), 2000);
+    window.addEventListener('resize', render);
+    displayCanvas.addEventListener('contextmenu', e => e.preventDefault());
 
-
-    // --- 초기 실행 ---
-    // 카메라를 도화지 중앙에 배치하고 첫 렌더링
     render();
-
 </script>
 </body>
 </html>
