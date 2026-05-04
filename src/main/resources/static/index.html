@@ -167,6 +167,21 @@
     let currentAction = null, undoHistory = [], currentStrokeCoords = new Set();
     let stompClient = null, isConnected = false;
 
+    let pixelBuffer = []; // 전송 대기 중인 픽셀 데이터 배열
+    const BATCH_INTERVAL_MS = 50; // 50ms = 초당 20회 주기
+
+    // batch 단위로 서버로 쏨
+    function flushPixelBuffer() {
+        if (isConnected && stompClient && pixelBuffer.length > 0) {
+            // 배열 전체를 JSON 문자열로 변환하여 단 1회의 패킷으로 전송
+            stompClient.send("/app/draw", {}, JSON.stringify(pixelBuffer));
+            pixelBuffer = []; // 버퍼 초기화
+        }
+    }
+
+    setInterval(flushPixelBuffer, BATCH_INTERVAL_MS);
+
+
     // --- 3. DOM 요소 매핑 ---
     const ui = {
         quota: document.getElementById('quotaDisplay'),
@@ -298,9 +313,9 @@
                 currentAction.quotaCost++;
             }
 
-            // 웹소켓 전송 부 (연결되었을 때 활성화)
-            if (isConnected && stompClient) {
-                stompClient.send("/app/draw", {}, JSON.stringify({ x: x, y: y, color: color, size: currentSize }));
+            // 버퍼에 담기
+            if (isConnected) {
+                pixelBuffer.push({ x: x, y: y, color: color, size: currentSize });
             }
 
             currentQuota--;
@@ -461,16 +476,20 @@
         requestAnimationFrame(updateTimer);
     }
 
-    // 서버 연동 시 아래 주석을 해제하여 사용
-
     function connectWebSocket() {
         const socket = new SockJS('/ws-paint');
         stompClient = Stomp.over(socket);
+        // stompClient.debug = null;
+
         stompClient.connect({}, (frame) => {
             isConnected = true;
             stompClient.subscribe('/topic/canvas', (msg) => {
-                const data = JSON.parse(msg.body);
-                setPixel(data.x, data.y, data.color, true);
+                //const data = JSON.parse(msg.body);
+                const dataArray = JSON.parse(msg.body);
+                //setPixel(data.x, data.y, data.color, true);
+                dataArray.forEach(data => {
+                    setPixel(data.x, data.y, data.color, true);
+                });
                 renderCanvas();
             });
             fetch('/api/canvas/snapshot').then(res => res.json()).then(data => {
