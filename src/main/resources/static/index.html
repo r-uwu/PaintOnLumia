@@ -3,181 +3,321 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PaintOnLumia - 프로토타입</title>
+    <title>PaintOnLumia - Beta</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background-color: #222; color: white; font-family: sans-serif; }
+        :root {
+            --bg-dark: rgba(20, 20, 25, 0.85);
+            --primary: #32CD32;
+            --accent: #FF4500;
+            --text-main: #FFFFFF;
+            --text-sub: #AAAAAA;
+        }
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #111; color: var(--text-main); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #displayCanvas { display: block; cursor: crosshair; }
-        #ui { position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 8px; pointer-events: auto; user-select: none; z-index: 10; }
-        .control-group { margin-bottom: 8px; }
-        label { display: inline-block; width: 60px; font-size: 12px; }
-        input[type="color"] { border: none; width: 40px; height: 25px; cursor: pointer; vertical-align: middle;}
-        #palette { display: flex; flex-wrap: wrap; gap: 4px; width: 140px; margin-top: 5px; }
-        .palette-btn { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 1px solid #555; transition: transform 0.1s; }
-        .palette-btn:hover { transform: scale(1.2); }
-        .progress-container { width: 100%; background-color: #555; height: 6px; margin-top: 5px; border-radius: 3px; overflow: hidden; }
-        .progress-bar { width: 100%; background-color: #32CD32; height: 100%; transition: width 0.1s linear; }
+
+        /* Sidebar UI */
+        #sidebar {
+            position: fixed; top: 0; left: 0; width: 280px; height: 100vh;
+            background: var(--bg-dark); backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255,255,255,0.1);
+            display: flex; flex-direction: column; z-index: 10;
+        }
+
+        /* Header & Tabs */
+        .header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .header h1 { margin: 0 0 10px 0; font-size: 20px; color: var(--accent); }
+        .status-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+        .tabs { display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .tab-btn { flex: 1; background: none; border: none; color: var(--text-sub); padding: 12px 0; cursor: pointer; transition: 0.2s; font-weight: bold; }
+        .tab-btn.active { color: var(--text-main); border-bottom: 2px solid var(--primary); }
+        .tab-btn:hover { background: rgba(255,255,255,0.05); }
+
+        /* Panels */
+        .panel { display: none; padding: 20px; flex: 1; overflow-y: auto; }
+        .panel.active { display: block; }
+        .control-group { margin-bottom: 20px; }
+        .control-group label { display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 8px; }
+
+        /* Palette */
+        #palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(24px, 1fr)); gap: 6px; }
+        .palette-btn { width: 100%; aspect-ratio: 1; border-radius: 4px; cursor: pointer; border: 1px solid #444; transition: transform 0.1s; }
+        .palette-btn:hover { transform: scale(1.1); z-index: 2; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+        .palette-btn.selected { border: 2px solid #FFF; transform: scale(1.1); }
+
+        /* Progress Bars */
+        .progress-container { width: 100%; background-color: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden; margin-top: 5px; }
+        .progress-bar { width: 100%; background-color: var(--primary); height: 100%; transition: width 0.1s linear; }
+
+        /* Inputs & Buttons */
+        input[type="range"] { width: 100%; accent-color: var(--primary); }
+        input[type="color"] { border: none; width: 100%; height: 30px; border-radius: 4px; cursor: pointer; background: none; }
+        .action-btn { width: 100%; padding: 10px; background: rgba(50, 205, 50, 0.2); border: 1px solid var(--primary); color: var(--text-main); border-radius: 4px; cursor: pointer; font-weight: bold; margin-bottom: 10px; transition: 0.2s; }
+        .action-btn:hover:not(:disabled) { background: var(--primary); color: #000; }
+        .action-btn:disabled { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: var(--text-sub); cursor: not-allowed; }
+
+        /* Mission Cards */
+        .mission-card { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 6px; margin-bottom: 10px; }
+        .mission-title { font-size: 13px; font-weight: bold; margin-bottom: 5px; }
+        .mission-reward { font-size: 11px; color: var(--accent); float: right; }
+        .mission-status { font-size: 11px; color: var(--text-sub); margin-top: 5px; text-align: right; }
+        .completed { opacity: 0.5; border-color: var(--primary); }
     </style>
 </head>
 <body>
 
 <canvas id="displayCanvas"></canvas>
 
-<div id="ui">
-    <div class="control-group">
-        <label>색상:</label>
-        <input type="color" id="colorPicker" value="#FF4500">
-    </div>
-    <div class="control-group">
-        <label>두께:</label>
-        <input type="range" id="brushSize" min="1" max="10" value="1">
-        <span id="brushSizeVal">1</span>px
-    </div>
-    <div class="control-group" id="palette"></div>
-
-    <div class="control-group" style="font-weight: bold; color: #32CD32;">
-        남은 픽셀: <span id="quotaDisplay"></span> / <span id="maxQuotaDisplay"></span>
+<div id="sidebar">
+    <div class="header">
+        <h1>PaintOnLumia</h1>
+        <div class="status-row">
+            <span>남은 픽셀: <strong id="quotaDisplay" style="color:var(--primary)">100</strong> / <span id="maxQuotaDisplay">1000</span></span>
+            <span>포인트: <strong id="pointsDisplay" style="color:var(--accent)">0</strong> P</span>
+        </div>
         <div class="progress-container">
             <div id="regenProgressBar" class="progress-bar"></div>
         </div>
-        <div style="font-size: 10px; color: #aaa; text-align: right; margin-top: 2px;">
-            다음 충전: <span id="regenTimeDisplay">0.0</span>초
+        <div style="font-size: 11px; color: var(--text-sub); text-align: right; margin-top: 4px;">다음 충전: <span id="regenTimeDisplay">0.0</span>초</div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('tool')">도구</button>
+        <button class="tab-btn" onclick="switchTab('mission')">미션</button>
+        <button class="tab-btn" onclick="switchTab('shop')">상점</button>
+    </div>
+
+    <div id="panel-tool" class="panel active">
+        <div class="control-group">
+            <label>현재 색상 지정</label>
+            <input type="color" id="colorPicker" value="#FF4500">
+        </div>
+        <div class="control-group">
+            <label>팔레트 (30색)</label>
+            <div id="palette"></div>
+        </div>
+        <div class="control-group">
+            <label>브러시 두께: <span id="brushSizeVal" style="color:#FFF">1</span>px</label>
+            <input type="range" id="brushSize" min="1" max="10" value="1">
+        </div>
+        <div class="control-group" style="font-size: 11px; color: var(--text-sub); line-height: 1.6;">
+            [조작 안내]<br>
+            - <strong>좌클릭 드래그</strong>: 그리기<br>
+            - <strong>우클릭 드래그</strong>: 화면 이동<br>
+            - <strong>마우스 휠</strong>: 줌 인/아웃<br>
+            - <strong>Ctrl + Z</strong>: 실행 취소 (로컬)<br>
+            현재 좌표: <span id="coords">0, 0</span> | 줌: <span id="zoomLevel">1.0</span>x
         </div>
     </div>
 
-    <div class="control-group" style="font-size: 11px; margin-top:10px;">
-        <div>좌표: <span id="coords">0, 0</span></div>
-        <div>줌: <span id="zoomLevel">1.0</span>x</div>
-        <div style="color:#aaa; margin-top:5px;">Ctrl+Z: 실행 취소</div>
+    <div id="panel-mission" class="panel">
+        <div class="control-group">
+            <label>일일 미션</label>
+            <div id="missionContainer"></div>
+        </div>
+    </div>
+
+    <div id="panel-shop" class="panel">
+        <div class="control-group">
+            <label>포인트 상점</label>
+            <button class="action-btn" onclick="shopBuyRefill()">픽셀 즉시 충전 (비용: 50P)</button>
+            <button class="action-btn" onclick="shopBuyMaxQuota()">최대 쿼터 +50 확장 (비용: 150P)</button>
+        </div>
     </div>
 </div>
 
 <script>
-    // --- 1. 환경 설정 ---
+    // --- 1. 환경 설정 및 데이터 ---
     const CONFIG = {
         MAP_SIZE: 2000,
-        MAX_QUOTA: 1000,
+        BASE_MAX_QUOTA: 100,
         REGEN_TIME_MS: 10000,
-        PALETTE_COLORS: ['#FFFFFF', '#000000', '#FF4500', '#1E90FF', '#32CD32', '#FFD700', '#FF69B4', '#8A2BE2']
+        // 30가지 스케일러블 색상 배열
+        PALETTE_COLORS: [
+            '#000000', '#1A1A1A', '#333333', '#4D4D4D', '#666666', '#808080', '#B3B3B3', '#CCCCCC', '#E6E6E6', '#FFFFFF',
+            '#FF0000', '#FF4500', '#FF8C00', '#FFD700', '#FFFF00', '#9ACD32', '#32CD32', '#00FF00', '#00FA9A', '#00CED1',
+            '#00BFFF', '#1E90FF', '#0000FF', '#8A2BE2', '#9932CC', '#FF00FF', '#FF69B4', '#FF1493', '#8B0000', '#8B4513'
+        ]
     };
 
-    // --- 2. 상태 변수 ---
-    let currentColor = CONFIG.PALETTE_COLORS[2];
+    // --- 2. 게임 상태 (유저 진행도) ---
+    const GameState = {
+        points: 0,
+        pixelsDrawn: 0,
+        uniqueColorsUsed: new Set(),
+        currentMaxQuota: CONFIG.BASE_MAX_QUOTA
+    };
+
+    // 미션 정의 데이터
+    const Missions = [
+        { id: 1, title: '첫 걸음', desc: '픽셀 50개 그리기', target: 50, reward: 50, current: 0, completed: false, type: 'draw' },
+        { id: 2, title: '예술가', desc: '픽셀 200개 그리기', target: 200, reward: 100, current: 0, completed: false, type: 'draw' },
+        { id: 3, title: '다채로움', desc: '5가지 다른 색상 사용', target: 5, reward: 80, current: 0, completed: false, type: 'color' }
+    ];
+
+    let currentColor = CONFIG.PALETTE_COLORS[11];
     let currentSize = 1;
-    let currentQuota = CONFIG.MAX_QUOTA;
+    let currentQuota = GameState.currentMaxQuota;
     let lastRegenTime = Date.now();
 
-    let camX = CONFIG.MAP_SIZE / 2;
-    let camY = CONFIG.MAP_SIZE / 2;
-    let zoom = 1.0;
+    let camX = CONFIG.MAP_SIZE / 2, camY = CONFIG.MAP_SIZE / 2, zoom = 1.0;
+    let isDrawing = false, isPanning = false;
+    let lastMouseX = 0, lastMouseY = 0, lastMapX = null, lastMapY = null;
+    let currentAction = null, undoHistory = [], currentStrokeCoords = new Set();
+    let stompClient = null, isConnected = false;
 
-    let isDrawing = false;
-    let isPanning = false;
-    let lastMouseX = 0, lastMouseY = 0;
-    let lastMapX = null, lastMapY = null;
+    // --- 3. DOM 요소 매핑 ---
+    const ui = {
+        quota: document.getElementById('quotaDisplay'),
+        maxQuota: document.getElementById('maxQuotaDisplay'),
+        points: document.getElementById('pointsDisplay'),
+        colorPicker: document.getElementById('colorPicker'),
+        palette: document.getElementById('palette'),
+        missionContainer: document.getElementById('missionContainer'),
+        displayCanvas: document.getElementById('displayCanvas'),
+        coords: document.getElementById('coords'),
+        zoom: document.getElementById('zoomLevel'),
+        brushSizeVal: document.getElementById('brushSizeVal')
+    };
 
-    // Undo 관련 상태
-    const MAX_UNDO_STACK = 10;
-    let undoHistory = [];
-    let currentAction = null;
-    let currentStrokeCoords = new Set();
-
-    // --- 3. DOM 요소 및 컨텍스트 세팅 ---
-    const displayCanvas = document.getElementById('displayCanvas');
-    const displayCtx = displayCanvas.getContext('2d', { alpha: false });
-
+    const displayCtx = ui.displayCanvas.getContext('2d', { alpha: false });
     const backCanvas = document.createElement('canvas');
     backCanvas.width = CONFIG.MAP_SIZE;
     backCanvas.height = CONFIG.MAP_SIZE;
-    // 경고 해결: willReadFrequently 옵션 추가
     const backCtx = backCanvas.getContext('2d', { alpha: false, willReadFrequently: true });
-
     backCtx.fillStyle = '#FFFFFF';
     backCtx.fillRect(0, 0, CONFIG.MAP_SIZE, CONFIG.MAP_SIZE);
 
-    const uiElements = {
-        colorPicker: document.getElementById('colorPicker'),
-        brushSizeInput: document.getElementById('brushSize'),
-        brushSizeVal: document.getElementById('brushSizeVal'),
-        quotaDisplay: document.getElementById('quotaDisplay'),
-        maxQuotaDisplay: document.getElementById('maxQuotaDisplay'),
-        regenProgressBar: document.getElementById('regenProgressBar'),
-        regenTimeDisplay: document.getElementById('regenTimeDisplay'),
-        paletteContainer: document.getElementById('palette'),
-        coordsDisplay: document.getElementById('coords'),
-        zoomDisplay: document.getElementById('zoomLevel')
-    };
-
-    uiElements.maxQuotaDisplay.textContent = CONFIG.MAX_QUOTA;
-    uiElements.colorPicker.value = currentColor;
-
-    // --- 4. 핵심 로직 함수 (순서 중요) ---
-
-    // UI 업데이트 함수 (ReferenceError 해결)
-    function updateQuotaUI() {
-        uiElements.quotaDisplay.textContent = currentQuota;
-        uiElements.quotaDisplay.style.color = (currentQuota <= 0) ? 'red' : '#32CD32';
+    // --- 4. 렌더링 및 UI 제어 ---
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById('panel-' + tabId).classList.add('active');
     }
-    updateQuotaUI(); // 초기화
 
-    function render() {
-        displayCanvas.width = window.innerWidth;
-        displayCanvas.height = window.innerHeight;
+    function updateTopStatusUI() {
+        ui.quota.textContent = currentQuota;
+        ui.maxQuota.textContent = GameState.currentMaxQuota;
+        ui.points.textContent = GameState.points;
+        ui.quota.style.color = (currentQuota <= 0) ? 'red' : 'var(--primary)';
+    }
+
+    function renderCanvas() {
+        ui.displayCanvas.width = window.innerWidth;
+        ui.displayCanvas.height = window.innerHeight;
         displayCtx.imageSmoothingEnabled = false;
+        displayCtx.fillStyle = "#111";
+        displayCtx.fillRect(0, 0, ui.displayCanvas.width, ui.displayCanvas.height);
 
-        displayCtx.fillStyle = "#222";
-        displayCtx.fillRect(0, 0, displayCanvas.width, displayCanvas.height);
-
-        const viewW = displayCanvas.width / zoom;
-        const viewH = displayCanvas.height / zoom;
+        const viewW = ui.displayCanvas.width / zoom;
+        const viewH = ui.displayCanvas.height / zoom;
         const sx = camX - viewW / 2;
         const sy = camY - viewH / 2;
 
-        displayCtx.drawImage(backCanvas, sx, sy, viewW, viewH, 0, 0, displayCanvas.width, displayCanvas.height);
-        uiElements.zoomDisplay.textContent = zoom.toFixed(1);
+        displayCtx.drawImage(backCanvas, sx, sy, viewW, viewH, 0, 0, ui.displayCanvas.width, ui.displayCanvas.height);
+        ui.zoom.textContent = zoom.toFixed(1);
     }
 
-    function screenToMapCoords(screenX, screenY) {
-        const viewW = displayCanvas.width / zoom;
-        const viewH = displayCanvas.height / zoom;
-        return {
-            x: Math.floor((camX - viewW / 2) + (screenX / zoom)),
-            y: Math.floor((camY - viewH / 2) + (screenY / zoom))
-        };
+    // --- 5. 미션 및 포인트 비즈니스 로직 ---
+    function renderMissions() {
+        ui.missionContainer.innerHTML = '';
+        Missions.forEach(m => {
+            const card = document.createElement('div');
+            card.className = `mission-card ${m.completed ? 'completed' : ''}`;
+            const progress = (m.current / m.target) * 100;
+            card.innerHTML = `
+                <div class="mission-title">${m.title} <span class="mission-reward">${m.reward}P</span></div>
+                <div style="font-size:11px; color:#aaa;">${m.desc}</div>
+                <div class="progress-container" style="height:4px;">
+                    <div class="progress-bar" style="width: ${progress}%"></div>
+                </div>
+                <div class="mission-status">${m.current} / ${m.target}</div>
+            `;
+            ui.missionContainer.appendChild(card);
+        });
     }
 
-    function setPixel(x, y, color) {
+    function checkMissions(type) {
+        let updated = false;
+        Missions.forEach(m => {
+            if (!m.completed && m.type === type) {
+                if (type === 'draw') m.current = GameState.pixelsDrawn;
+                if (type === 'color') m.current = GameState.uniqueColorsUsed.size;
+
+                if (m.current >= m.target) {
+                    m.current = m.target;
+                    m.completed = true;
+                    GameState.points += m.reward;
+                    alert(`미션 완료: ${m.title}! ${m.reward} 포인트를 획득했습니다.`);
+                    updateTopStatusUI();
+                }
+                updated = true;
+            }
+        });
+        if (updated) renderMissions();
+    }
+
+    // --- 6. 상점 비즈니스 로직 ---
+    function shopBuyRefill() {
+        if (GameState.points < 50) { alert("포인트가 부족합니다."); return; }
+        if (currentQuota >= GameState.currentMaxQuota) { alert("이미 쿼터가 최대치입니다."); return; }
+
+        GameState.points -= 50;
+        currentQuota = GameState.currentMaxQuota;
+        updateTopStatusUI();
+        alert("픽셀 쿼터가 즉시 충전되었습니다.");
+    }
+
+    function shopBuyMaxQuota() {
+        if (GameState.points < 150) { alert("포인트가 부족합니다."); return; }
+        GameState.points -= 150;
+        GameState.currentMaxQuota += 50;
+        currentQuota += 50;
+        updateTopStatusUI();
+        alert("최대 쿼터가 50 증가했습니다!");
+    }
+
+    // --- 7. 핵심 드로잉 로직 ---
+    function setPixel(x, y, color, isRemote = false) {
         if (x < 0 || x >= CONFIG.MAP_SIZE || y < 0 || y >= CONFIG.MAP_SIZE) return;
-        if (currentQuota <= 0) return;
 
         const offset = Math.floor(currentSize / 2);
-        const startX = x - offset;
-        const startY = y - offset;
+        const startX = x - offset, startY = y - offset;
 
-        // 1. 중복 렌더링 방지 (쿼터 누수 해결)
-        const coordKey = `${startX},${startY}`;
-        if (currentStrokeCoords.has(coordKey)) return;
-        currentStrokeCoords.add(coordKey);
+        if (!isRemote) {
+            if (currentQuota <= 0) return;
+            const coordKey = `${startX},${startY}`;
+            if (currentStrokeCoords.has(coordKey)) return;
+            currentStrokeCoords.add(coordKey);
 
-        // 2. Undo 데이터 수집 (안전하게 oldData 캡처)
-        if (currentAction !== null) {
-            const oldData = backCtx.getImageData(startX, startY, currentSize, currentSize);
-            currentAction.pixels.push({ x: startX, y: startY, oldData: oldData });
-            currentAction.quotaCost++;
+            if (currentAction !== null) {
+                const oldData = backCtx.getImageData(startX, startY, currentSize, currentSize);
+                currentAction.pixels.push({ x: startX, y: startY, oldData: oldData });
+                currentAction.quotaCost++;
+            }
+
+            // 웹소켓 전송 부 (연결되었을 때 활성화)
+            if (isConnected && stompClient) {
+                stompClient.send("/app/draw", {}, JSON.stringify({ x: x, y: y, color: color, size: currentSize }));
+            }
+
+            currentQuota--;
+            GameState.pixelsDrawn++;
+            GameState.uniqueColorsUsed.add(color);
+            updateTopStatusUI();
+            checkMissions('draw');
         }
 
-        // 3. 캔버스에 그리기 및 쿼터 차감
         backCtx.fillStyle = color;
         backCtx.fillRect(startX, startY, currentSize, currentSize);
-
-        currentQuota--;
-        updateQuotaUI();
     }
 
     function drawLine(x1, y1, x2, y2, color) {
         const dx = Math.abs(x2 - x1), dy = Math.abs(y2 - y1);
         const sx = (x1 < x2) ? 1 : -1, sy = (y1 < y2) ? 1 : -1;
         let err = dx - dy;
-
         while (true) {
             if (currentQuota <= 0) break;
             setPixel(x1, y1, color);
@@ -188,154 +328,166 @@
         }
     }
 
-    // --- 5. 타이머 및 UI 이벤트 ---
-
-    function updateRegenTimer() {
-        if (currentQuota < CONFIG.MAX_QUOTA) {
-            const now = Date.now();
-            const elapsed = now - lastRegenTime;
-
-            if (elapsed >= CONFIG.REGEN_TIME_MS) {
-                currentQuota++;
-                lastRegenTime = now - (elapsed - CONFIG.REGEN_TIME_MS);
-                updateQuotaUI();
-            }
-
-            const currentElapsed = Date.now() - lastRegenTime;
-            const remaining = Math.max(0, CONFIG.REGEN_TIME_MS - currentElapsed);
-            const progressPercent = (currentElapsed / CONFIG.REGEN_TIME_MS) * 100;
-
-            uiElements.regenProgressBar.style.width = `${progressPercent}%`;
-            uiElements.regenTimeDisplay.textContent = (remaining / 1000).toFixed(1);
-        } else {
-            uiElements.regenProgressBar.style.width = `100%`;
-            uiElements.regenTimeDisplay.textContent = "0.0";
-            lastRegenTime = Date.now();
-        }
-        requestAnimationFrame(updateRegenTimer);
+    // --- 8. 초기화 및 이벤트 리스너 ---
+    function initUI() {
+        CONFIG.PALETTE_COLORS.forEach(color => {
+            const btn = document.createElement('div');
+            btn.className = 'palette-btn';
+            btn.style.backgroundColor = color;
+            btn.dataset.color = color;
+            if (color === currentColor) btn.classList.add('selected');
+            ui.palette.appendChild(btn);
+        });
+        ui.colorPicker.value = currentColor;
+        updateTopStatusUI();
+        renderMissions();
     }
-    requestAnimationFrame(updateRegenTimer);
 
-    // 팔레트 생성
-    CONFIG.PALETTE_COLORS.forEach(color => {
-        const btn = document.createElement('div');
-        btn.style.backgroundColor = color;
-        btn.className = 'palette-btn';
-        btn.dataset.color = color;
-        if (color === currentColor) btn.style.border = '2px solid #FFF';
-        uiElements.paletteContainer.appendChild(btn);
-    });
-
-    uiElements.paletteContainer.addEventListener('click', (e) => {
+    ui.palette.addEventListener('click', (e) => {
         if (e.target.classList.contains('palette-btn')) {
             currentColor = e.target.dataset.color;
-            uiElements.colorPicker.value = currentColor;
-            document.querySelectorAll('.palette-btn').forEach(b => b.style.border = '1px solid #555');
-            e.target.style.border = '2px solid #FFF';
+            ui.colorPicker.value = currentColor;
+            document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('selected'));
+            e.target.classList.add('selected');
+            GameState.uniqueColorsUsed.add(currentColor);
+            checkMissions('color');
         }
     });
 
-    uiElements.brushSizeInput.addEventListener('input', (e) => {
-        currentSize = parseInt(e.target.value, 10);
-        uiElements.brushSizeVal.textContent = currentSize;
-    });
-
-    uiElements.colorPicker.addEventListener('input', (e) => {
+    ui.colorPicker.addEventListener('input', (e) => {
         currentColor = e.target.value;
-        document.querySelectorAll('.palette-btn').forEach(b => b.style.border = '1px solid #555');
+        document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('selected'));
+        GameState.uniqueColorsUsed.add(currentColor);
+        checkMissions('color');
     });
 
-    // --- 6. 캔버스 마우스 상호작용 및 Undo ---
+    document.getElementById('brushSize').addEventListener('input', (e) => {
+        currentSize = parseInt(e.target.value, 10);
+        ui.brushSizeVal.textContent = currentSize;
+    });
 
-    displayCanvas.addEventListener('mousedown', (e) => {
-        const mapCoords = screenToMapCoords(e.clientX, e.clientY);
+    // 캔버스 마우스 상호작용
+    ui.displayCanvas.addEventListener('mousedown', (e) => {
+        const vw = ui.displayCanvas.width / zoom, vh = ui.displayCanvas.height / zoom;
+        const mx = Math.floor((camX - vw/2) + (e.clientX / zoom));
+        const my = Math.floor((camY - vh/2) + (e.clientY / zoom));
+
         if (e.button === 0) {
-            isDrawing = true;
-            lastMapX = mapCoords.x;
-            lastMapY = mapCoords.y;
-
-            // Undo를 위한 세션 초기화
+            isDrawing = true; lastMapX = mx; lastMapY = my;
             currentStrokeCoords.clear();
             currentAction = { pixels: [], quotaCost: 0 };
-
-            setPixel(mapCoords.x, mapCoords.y, currentColor);
-            render();
+            setPixel(mx, my, currentColor);
+            renderCanvas();
         } else if (e.button === 2) {
-            isPanning = true;
-            lastMouseX = e.clientX;
-            lastMouseY = e.clientY;
+            isPanning = true; lastMouseX = e.clientX; lastMouseY = e.clientY;
         }
     });
 
-    displayCanvas.addEventListener('mousemove', (e) => {
-        const mapCoords = screenToMapCoords(e.clientX, e.clientY);
-        uiElements.coordsDisplay.textContent = `${mapCoords.x}, ${mapCoords.y}`;
+    ui.displayCanvas.addEventListener('mousemove', (e) => {
+        const vw = ui.displayCanvas.width / zoom, vh = ui.displayCanvas.height / zoom;
+        const mx = Math.floor((camX - vw/2) + (e.clientX / zoom));
+        const my = Math.floor((camY - vh/2) + (e.clientY / zoom));
+        ui.coords.textContent = `${mx}, ${my}`;
 
         if (isDrawing) {
-            if (lastMapX === mapCoords.x && lastMapY === mapCoords.y) return; // 위치 변경 없을 시 스킵
-            drawLine(lastMapX, lastMapY, mapCoords.x, mapCoords.y, currentColor);
-            lastMapX = mapCoords.x;
-            lastMapY = mapCoords.y;
-            render();
+            if (lastMapX === mx && lastMapY === my) return;
+            drawLine(lastMapX, lastMapY, mx, my, currentColor);
+            lastMapX = mx; lastMapY = my;
+            renderCanvas();
         } else if (isPanning) {
             camX -= (e.clientX - lastMouseX) / zoom;
             camY -= (e.clientY - lastMouseY) / zoom;
             camX = Math.max(0, Math.min(CONFIG.MAP_SIZE, camX));
             camY = Math.max(0, Math.min(CONFIG.MAP_SIZE, camY));
-            lastMouseX = e.clientX;
-            lastMouseY = e.clientY;
-            render();
+            lastMouseX = e.clientX; lastMouseY = e.clientY;
+            renderCanvas();
         }
     });
 
     window.addEventListener('mouseup', () => {
         if (isDrawing && currentAction && currentAction.pixels.length > 0) {
             undoHistory.push(currentAction);
-            if (undoHistory.length > MAX_UNDO_STACK) undoHistory.shift();
+            if (undoHistory.length > 10) undoHistory.shift();
         }
-        isDrawing = false;
-        isPanning = false;
-        currentAction = null;
+        isDrawing = false; isPanning = false; currentAction = null;
     });
 
-    // Undo (Ctrl+Z) 단축키
-    window.addEventListener('keydown', (e) => {
-        if (e.ctrlKey && e.key.toLowerCase() === 'z') {
-            e.preventDefault();
-            if (undoHistory.length === 0) return;
-
-            const lastAction = undoHistory.pop();
-
-            // NOTE: 로컬 전용 Undo. 서버 연동 시 타인의 그림을 덮어쓰는 문제가 발생할 수 있음.
-            for (let i = lastAction.pixels.length - 1; i >= 0; i--) {
-                const p = lastAction.pixels[i];
-                backCtx.putImageData(p.oldData, p.x, p.y);
-            }
-
-            currentQuota = Math.min(CONFIG.MAX_QUOTA, currentQuota + lastAction.quotaCost);
-            updateQuotaUI();
-
-            if (currentQuota < CONFIG.MAX_QUOTA) lastRegenTime = Date.now();
-            render();
-        }
-    });
-
-    displayCanvas.addEventListener('wheel', (e) => {
+    ui.displayCanvas.addEventListener('wheel', (e) => {
         e.preventDefault();
         const oldZoom = zoom;
         zoom *= (e.deltaY > 0) ? (1 / 1.1) : 1.1;
         zoom = Math.max(0.5, Math.min(50.0, zoom));
-
-        const mapCoords = screenToMapCoords(e.clientX, e.clientY);
-        camX = mapCoords.x + (camX - mapCoords.x) * (oldZoom / zoom);
-        camY = mapCoords.y + (camY - mapCoords.y) * (oldZoom / zoom);
-        render();
+        const vw = ui.displayCanvas.width / zoom, vh = ui.displayCanvas.height / zoom;
+        camX += ((camX - vw/2 + e.clientX/zoom) - camX) * (oldZoom/zoom - 1); // 줌 중심점 보정 간소화
+        renderCanvas();
     }, { passive: false });
 
-    window.addEventListener('resize', render);
-    displayCanvas.addEventListener('contextmenu', e => e.preventDefault());
+    window.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            if (undoHistory.length === 0) return;
+            const action = undoHistory.pop();
+            for (let i = action.pixels.length - 1; i >= 0; i--) {
+                const p = action.pixels[i];
+                backCtx.putImageData(p.oldData, p.x, p.y);
+            }
+            currentQuota = Math.min(GameState.currentMaxQuota, currentQuota + action.quotaCost);
+            updateTopStatusUI();
+            if (currentQuota < GameState.currentMaxQuota) lastRegenTime = Date.now();
+            renderCanvas();
+        }
+    });
 
-    render();
+    window.addEventListener('resize', renderCanvas);
+    ui.displayCanvas.addEventListener('contextmenu', e => e.preventDefault());
+
+    // 타이머 루프
+    function updateTimer() {
+        if (currentQuota < GameState.currentMaxQuota) {
+            const elapsed = Date.now() - lastRegenTime;
+            if (elapsed >= CONFIG.REGEN_TIME_MS) {
+                currentQuota++;
+                lastRegenTime = Date.now() - (elapsed - CONFIG.REGEN_TIME_MS);
+                updateTopStatusUI();
+            }
+            const currentElapsed = Date.now() - lastRegenTime;
+            document.getElementById('regenProgressBar').style.width = `${(currentElapsed / CONFIG.REGEN_TIME_MS) * 100}%`;
+            document.getElementById('regenTimeDisplay').textContent = (Math.max(0, CONFIG.REGEN_TIME_MS - currentElapsed) / 1000).toFixed(1);
+        } else {
+            document.getElementById('regenProgressBar').style.width = `100%`;
+            document.getElementById('regenTimeDisplay').textContent = "0.0";
+            lastRegenTime = Date.now();
+        }
+        requestAnimationFrame(updateTimer);
+    }
+
+    // 서버 연동 시 아래 주석을 해제하여 사용
+
+    function connectWebSocket() {
+        const socket = new SockJS('/ws-paint');
+        stompClient = Stomp.over(socket);
+        stompClient.connect({}, (frame) => {
+            isConnected = true;
+            stompClient.subscribe('/topic/canvas', (msg) => {
+                const data = JSON.parse(msg.body);
+                setPixel(data.x, data.y, data.color, true);
+                renderCanvas();
+            });
+            fetch('/api/canvas/snapshot').then(res => res.json()).then(data => {
+                Object.entries(data).forEach(([key, color]) => {
+                    const [x, y] = key.split(':').map(Number);
+                    backCtx.fillStyle = color; backCtx.fillRect(x, y, 1, 1);
+                });
+                renderCanvas();
+            });
+        });
+    }
+    connectWebSocket();
+
+
+    initUI();
+    renderCanvas();
+    requestAnimationFrame(updateTimer);
 </script>
 </body>
 </html>

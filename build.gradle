@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '4.0.6'
+    id 'org.springframework.boot' version '3.1.12'
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
@@ -36,7 +36,9 @@ dependencies {
     // 3. Object Mapping & Optimization
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
-
+    // JPA 및 MySQL 드라이버
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    runtimeOnly 'com.mysql:mysql-connector-j'
 }
 
 tasks.named('test') {
