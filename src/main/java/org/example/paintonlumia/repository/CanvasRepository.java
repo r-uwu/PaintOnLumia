@@ -55,7 +55,8 @@ public class CanvasRepository {
 
                     if (px >= 0 && px < 2000 && py >= 0 && py < 2000) {
                         String field = px + ":" + py;
-                        pixelBatch.put(field, msg.getColor());
+                        String value = msg.getColor() + "|" + msg.getAuthor();
+                        pixelBatch.put(field, value);
                     }
                 }
             }

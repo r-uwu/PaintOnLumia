@@ -12,4 +12,5 @@ public class PixelMessage {
     private int y;
     private String color;
     private int size;
+    private String author;
 }

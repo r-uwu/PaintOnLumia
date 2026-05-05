@@ -23,4 +23,5 @@ public class UserEntity {
     private int maxQuota;
     private int points;
     private long lastUpdateTime;
+    
 }
