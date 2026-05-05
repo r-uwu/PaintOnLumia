@@ -17,7 +17,6 @@
         body { margin: 0; padding: 0; overflow: hidden; background-color: #111; color: var(--text-main); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #displayCanvas { display: block; cursor: crosshair; }
 
-        /* Sidebar UI */
         #sidebar {
             position: fixed; top: 0; left: 0; width: 280px; height: 100vh;
             background: var(--bg-dark); backdrop-filter: blur(10px);
@@ -25,7 +24,6 @@
             display: flex; flex-direction: column; z-index: 10;
         }
 
-        /* Header & Tabs */
         .header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .header h1 { margin: 0 0 10px 0; font-size: 20px; color: var(--accent); }
         .status-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
@@ -34,30 +32,25 @@
         .tab-btn.active { color: var(--text-main); border-bottom: 2px solid var(--primary); }
         .tab-btn:hover { background: rgba(255,255,255,0.05); }
 
-        /* Panels */
         .panel { display: none; padding: 20px; flex: 1; overflow-y: auto; }
         .panel.active { display: block; }
         .control-group { margin-bottom: 20px; }
         .control-group label { display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 8px; }
 
-        /* Palette */
         #palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(24px, 1fr)); gap: 6px; }
         .palette-btn { width: 100%; aspect-ratio: 1; border-radius: 4px; cursor: pointer; border: 1px solid #444; transition: transform 0.1s; }
         .palette-btn:hover { transform: scale(1.1); z-index: 2; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
         .palette-btn.selected { border: 2px solid #FFF; transform: scale(1.1); }
 
-        /* Progress Bars */
         .progress-container { width: 100%; background-color: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden; margin-top: 5px; }
         .progress-bar { width: 100%; background-color: var(--primary); height: 100%; transition: width 0.1s linear; }
 
-        /* Inputs & Buttons */
         input[type="range"] { width: 100%; accent-color: var(--primary); }
         input[type="color"] { border: none; width: 100%; height: 30px; border-radius: 4px; cursor: pointer; background: none; }
         .action-btn { width: 100%; padding: 10px; background: rgba(50, 205, 50, 0.2); border: 1px solid var(--primary); color: var(--text-main); border-radius: 4px; cursor: pointer; font-weight: bold; margin-bottom: 10px; transition: 0.2s; }
         .action-btn:hover:not(:disabled) { background: var(--primary); color: #000; }
         .action-btn:disabled { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: var(--text-sub); cursor: not-allowed; }
 
-        /* Mission Cards */
         .mission-card { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 6px; margin-bottom: 10px; }
         .mission-title { font-size: 13px; font-weight: bold; margin-bottom: 5px; }
         .mission-reward { font-size: 11px; color: var(--accent); float: right; }
@@ -73,7 +66,7 @@
     <div class="header">
         <h1>PaintOnLumia</h1>
         <div class="status-row">
-            <span>남은 픽셀: <strong id="quotaDisplay" style="color:var(--primary)">100</strong> / <span id="maxQuotaDisplay">1000</span></span>
+            <span>남은 픽셀: <strong id="quotaDisplay" style="color:var(--primary)">0</strong> / <span id="maxQuotaDisplay">0</span></span>
             <span>포인트: <strong id="pointsDisplay" style="color:var(--accent)">0</strong> P</span>
         </div>
         <div class="progress-container">
@@ -128,28 +121,35 @@
 </div>
 
 <script>
-    // --- 1. 환경 설정 및 데이터 ---
+    // --- 1. 앱 진입 및 설정 ---
+    const currentUsername = sessionStorage.getItem('username');
+    if (!currentUsername) {
+        window.location.href = '/login.html';
+    }
+
     const CONFIG = {
         MAP_SIZE: 2000,
         BASE_MAX_QUOTA: 100,
         REGEN_TIME_MS: 10000,
-        // 30가지 스케일러블 색상 배열
         PALETTE_COLORS: [
             '#000000', '#1A1A1A', '#333333', '#4D4D4D', '#666666', '#808080', '#B3B3B3', '#CCCCCC', '#E6E6E6', '#FFFFFF',
             '#FF0000', '#FF4500', '#FF8C00', '#FFD700', '#FFFF00', '#9ACD32', '#32CD32', '#00FF00', '#00FA9A', '#00CED1',
             '#00BFFF', '#1E90FF', '#0000FF', '#8A2BE2', '#9932CC', '#FF00FF', '#FF69B4', '#FF1493', '#8B0000', '#8B4513'
-        ]
+        ],
+        // 개발 및 테스트용 상수 추가
+        DEV_MODE: true,               // true일 경우 아래의 수치로 서버 DB를 덮어씌웁니다.
+        DEV_START_QUOTA: 9999,        // 테스트용 시작 쿼터
+        DEV_START_MAX_QUOTA: 9999,    // 테스트용 최대 쿼터
+        DEV_START_POINTS: 5000        // 테스트용 시작 포인트
     };
 
-    // --- 2. 게임 상태 (유저 진행도) ---
     const GameState = {
-        points: 0,
-        pixelsDrawn: 0,
+        points: 100,
+        pixelsDrawn: 100,
         uniqueColorsUsed: new Set(),
         currentMaxQuota: CONFIG.BASE_MAX_QUOTA
     };
 
-    // 미션 정의 데이터
     const Missions = [
         { id: 1, title: '첫 걸음', desc: '픽셀 50개 그리기', target: 50, reward: 50, current: 0, completed: false, type: 'draw' },
         { id: 2, title: '예술가', desc: '픽셀 200개 그리기', target: 200, reward: 100, current: 0, completed: false, type: 'draw' },
@@ -158,31 +158,18 @@
 
     let currentColor = CONFIG.PALETTE_COLORS[11];
     let currentSize = 1;
-    let currentQuota = GameState.currentMaxQuota;
+    let currentQuota = 0;
     let lastRegenTime = Date.now();
 
     let camX = CONFIG.MAP_SIZE / 2, camY = CONFIG.MAP_SIZE / 2, zoom = 1.0;
     let isDrawing = false, isPanning = false;
     let lastMouseX = 0, lastMouseY = 0, lastMapX = null, lastMapY = null;
     let currentAction = null, undoHistory = [], currentStrokeCoords = new Set();
+
     let stompClient = null, isConnected = false;
+    let pixelBuffer = [];
+    const BATCH_INTERVAL_MS = 50;
 
-    let pixelBuffer = []; // 전송 대기 중인 픽셀 데이터 배열
-    const BATCH_INTERVAL_MS = 50; // 50ms = 초당 20회 주기
-
-    // batch 단위로 서버로 쏨
-    function flushPixelBuffer() {
-        if (isConnected && stompClient && pixelBuffer.length > 0) {
-            // 배열 전체를 JSON 문자열로 변환하여 단 1회의 패킷으로 전송
-            stompClient.send("/app/draw", {}, JSON.stringify(pixelBuffer));
-            pixelBuffer = []; // 버퍼 초기화
-        }
-    }
-
-    setInterval(flushPixelBuffer, BATCH_INTERVAL_MS);
-
-
-    // --- 3. DOM 요소 매핑 ---
     const ui = {
         quota: document.getElementById('quotaDisplay'),
         maxQuota: document.getElementById('maxQuotaDisplay'),
@@ -204,7 +191,61 @@
     backCtx.fillStyle = '#FFFFFF';
     backCtx.fillRect(0, 0, CONFIG.MAP_SIZE, CONFIG.MAP_SIZE);
 
-    // --- 4. 렌더링 및 UI 제어 ---
+    // --- 2. 앱 생명주기 제어 (Single Entry Point) ---
+    async function initializeApp() {
+        try {
+            const res = await fetch(`/api/user/info?username=${currentUsername}`);
+            if (!res.ok) throw new Error("유저 정보를 불러올 수 없습니다.");
+
+            const userData = await res.json();
+
+            if (CONFIG.DEV_MODE) {
+                currentQuota = CONFIG.DEV_START_QUOTA;
+                GameState.currentMaxQuota = CONFIG.DEV_START_MAX_QUOTA;
+                GameState.points = CONFIG.DEV_START_POINTS;
+                syncUserData(); // 설정한 테스트 수치를 DB에 즉시 덮어씌움
+                console.log("개발자 테스트 모드가 활성화되어 초기 수치가 강제 적용되었습니다.");
+            } else {
+                currentQuota = userData.currentQuota;
+                GameState.currentMaxQuota = userData.maxQuota;
+                GameState.points = userData.points;
+            }
+
+
+            lastRegenTime = Date.now();
+
+            initUI();
+            renderCanvas();
+            requestAnimationFrame(updateTimer);
+            connectWebSocket();
+
+            setInterval(syncUserData, 5000);
+            setInterval(flushPixelBuffer, BATCH_INTERVAL_MS);
+
+        } catch (error) {
+            console.error("초기화 실패:", error);
+            alert("세션이 만료되었거나 오류가 발생했습니다. 다시 로그인해주세요.");
+            sessionStorage.removeItem('username');
+            window.location.href = '/login.html';
+        }
+    }
+
+    function syncUserData() {
+        if (!currentUsername) return;
+        fetch('/api/user/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: currentUsername,
+                currentQuota: currentQuota,
+                maxQuota: GameState.currentMaxQuota,
+                points: GameState.points,
+                lastUpdateTime: Date.now()
+            })
+        });
+    }
+
+    // --- 3. 렌더링 및 UI 기능 ---
     function switchTab(tabId) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
@@ -235,7 +276,21 @@
         ui.zoom.textContent = zoom.toFixed(1);
     }
 
-    // --- 5. 미션 및 포인트 비즈니스 로직 ---
+    function initUI() {
+        CONFIG.PALETTE_COLORS.forEach(color => {
+            const btn = document.createElement('div');
+            btn.className = 'palette-btn';
+            btn.style.backgroundColor = color;
+            btn.dataset.color = color;
+            if (color === currentColor) btn.classList.add('selected');
+            ui.palette.appendChild(btn);
+        });
+        ui.colorPicker.value = currentColor;
+        updateTopStatusUI();
+        renderMissions();
+    }
+
+    // --- 4. 비즈니스 로직 ---
     function renderMissions() {
         ui.missionContainer.innerHTML = '';
         Missions.forEach(m => {
@@ -274,11 +329,9 @@
         if (updated) renderMissions();
     }
 
-    // --- 6. 상점 비즈니스 로직 ---
     function shopBuyRefill() {
         if (GameState.points < 50) { alert("포인트가 부족합니다."); return; }
         if (currentQuota >= GameState.currentMaxQuota) { alert("이미 쿼터가 최대치입니다."); return; }
-
         GameState.points -= 50;
         currentQuota = GameState.currentMaxQuota;
         updateTopStatusUI();
@@ -294,45 +347,90 @@
         alert("최대 쿼터가 50 증가했습니다!");
     }
 
-    // --- 7. 핵심 드로잉 로직 ---
+    function rgbToHex(r, g, b) {
+        return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1).toUpperCase();
+    }
+
+    // --- 5. 드로잉 및 통신 ---
     function setPixel(x, y, color, isRemote = false) {
         if (x < 0 || x >= CONFIG.MAP_SIZE || y < 0 || y >= CONFIG.MAP_SIZE) return;
 
         const offset = Math.floor(currentSize / 2);
         const startX = x - offset, startY = y - offset;
+        const targetColorUpper = color.toUpperCase();
 
-        if (!isRemote) {
-            if (currentQuota <= 0) return;
-            const coordKey = `${startX},${startY}`;
-            if (currentStrokeCoords.has(coordKey)) return;
-            currentStrokeCoords.add(coordKey);
-
-            if (currentAction !== null) {
-                const oldData = backCtx.getImageData(startX, startY, currentSize, currentSize);
-                currentAction.pixels.push({ x: startX, y: startY, oldData: oldData });
-                currentAction.quotaCost++;
-            }
-
-            // 버퍼에 담기
-            if (isConnected) {
-                pixelBuffer.push({ x: x, y: y, color: color, size: currentSize });
-            }
-
-            currentQuota--;
-            GameState.pixelsDrawn++;
-            GameState.uniqueColorsUsed.add(color);
-            updateTopStatusUI();
-            checkMissions('draw');
+        if (isRemote) {
+            backCtx.fillStyle = color;
+            backCtx.fillRect(startX, startY, currentSize, currentSize);
+            return;
         }
 
+        let actualCost = 0;
+        const validPixels = [];
+        const existingData = backCtx.getImageData(startX, startY, currentSize, currentSize).data;
+
+        for (let i = 0; i < currentSize; i++) {
+            for (let j = 0; j < currentSize; j++) {
+                const px = startX + i;
+                const py = startY + j;
+
+                if (px < 0 || px >= CONFIG.MAP_SIZE || py < 0 || py >= CONFIG.MAP_SIZE) continue;
+
+                const pixelKey = px + "," + py;
+                if (currentStrokeCoords.has(pixelKey)) continue;
+
+                const dataIdx = (j * currentSize + i) * 4;
+                const r = existingData[dataIdx];
+                const g = existingData[dataIdx+1];
+                const b = existingData[dataIdx+2];
+                const a = existingData[dataIdx+3];
+
+                if (a !== 0 && rgbToHex(r, g, b) === targetColorUpper) {
+                    continue;
+                }
+
+                currentStrokeCoords.add(pixelKey);
+                validPixels.push({px, py});
+                actualCost++;
+            }
+        }
+
+        if (actualCost === 0) return;
+
+        if (currentQuota < actualCost) {
+            validPixels.length = currentQuota;
+            actualCost = currentQuota;
+            if (actualCost === 0) return;
+        }
+
+        if (currentAction !== null) {
+            const oldData = backCtx.getImageData(startX, startY, currentSize, currentSize);
+            currentAction.pixels.push({ x: startX, y: startY, oldData: oldData });
+            currentAction.quotaCost += actualCost;
+        }
+
+        if (isConnected && stompClient) {
+            pixelBuffer.push({ x: x, y: y, color: color, size: currentSize });
+        }
+
+        currentQuota -= actualCost;
+        GameState.pixelsDrawn += actualCost;
+        GameState.uniqueColorsUsed.add(color);
+
+        updateTopStatusUI();
+        checkMissions('draw');
+
         backCtx.fillStyle = color;
-        backCtx.fillRect(startX, startY, currentSize, currentSize);
+        for (let i = 0; i < validPixels.length; i++) {
+            backCtx.fillRect(validPixels[i].px, validPixels[i].py, 1, 1);
+        }
     }
 
     function drawLine(x1, y1, x2, y2, color) {
         const dx = Math.abs(x2 - x1), dy = Math.abs(y2 - y1);
         const sx = (x1 < x2) ? 1 : -1, sy = (y1 < y2) ? 1 : -1;
         let err = dx - dy;
+
         while (true) {
             if (currentQuota <= 0) break;
             setPixel(x1, y1, color);
@@ -343,21 +441,38 @@
         }
     }
 
-    // --- 8. 초기화 및 이벤트 리스너 ---
-    function initUI() {
-        CONFIG.PALETTE_COLORS.forEach(color => {
-            const btn = document.createElement('div');
-            btn.className = 'palette-btn';
-            btn.style.backgroundColor = color;
-            btn.dataset.color = color;
-            if (color === currentColor) btn.classList.add('selected');
-            ui.palette.appendChild(btn);
-        });
-        ui.colorPicker.value = currentColor;
-        updateTopStatusUI();
-        renderMissions();
+    function flushPixelBuffer() {
+        if (isConnected && stompClient && pixelBuffer.length > 0) {
+            stompClient.send("/app/draw", {}, JSON.stringify(pixelBuffer));
+            pixelBuffer = [];
+        }
     }
 
+    function connectWebSocket() {
+        const socket = new SockJS('/ws-paint');
+        stompClient = Stomp.over(socket);
+        stompClient.debug = null;
+
+        stompClient.connect({}, (frame) => {
+            isConnected = true;
+            stompClient.subscribe('/topic/canvas', (msg) => {
+                const dataArray = JSON.parse(msg.body);
+                dataArray.forEach(data => {
+                    setPixel(data.x, data.y, data.color, true);
+                });
+                renderCanvas();
+            });
+            fetch('/api/canvas/snapshot').then(res => res.json()).then(data => {
+                Object.entries(data).forEach(([key, color]) => {
+                    const [x, y] = key.split(':').map(Number);
+                    backCtx.fillStyle = color; backCtx.fillRect(x, y, 1, 1);
+                });
+                renderCanvas();
+            });
+        });
+    }
+
+    // --- 6. 이벤트 리스너 ---
     ui.palette.addEventListener('click', (e) => {
         if (e.target.classList.contains('palette-btn')) {
             currentColor = e.target.dataset.color;
@@ -381,7 +496,6 @@
         ui.brushSizeVal.textContent = currentSize;
     });
 
-    // 캔버스 마우스 상호작용
     ui.displayCanvas.addEventListener('mousedown', (e) => {
         const vw = ui.displayCanvas.width / zoom, vh = ui.displayCanvas.height / zoom;
         const mx = Math.floor((camX - vw/2) + (e.clientX / zoom));
@@ -433,7 +547,7 @@
         zoom *= (e.deltaY > 0) ? (1 / 1.1) : 1.1;
         zoom = Math.max(0.5, Math.min(50.0, zoom));
         const vw = ui.displayCanvas.width / zoom, vh = ui.displayCanvas.height / zoom;
-        camX += ((camX - vw/2 + e.clientX/zoom) - camX) * (oldZoom/zoom - 1); // 줌 중심점 보정 간소화
+        camX += ((camX - vw/2 + e.clientX/zoom) - camX) * (oldZoom/zoom - 1);
         renderCanvas();
     }, { passive: false });
 
@@ -456,7 +570,6 @@
     window.addEventListener('resize', renderCanvas);
     ui.displayCanvas.addEventListener('contextmenu', e => e.preventDefault());
 
-    // 타이머 루프
     function updateTimer() {
         if (currentQuota < GameState.currentMaxQuota) {
             const elapsed = Date.now() - lastRegenTime;
@@ -476,37 +589,8 @@
         requestAnimationFrame(updateTimer);
     }
 
-    function connectWebSocket() {
-        const socket = new SockJS('/ws-paint');
-        stompClient = Stomp.over(socket);
-        // stompClient.debug = null;
-
-        stompClient.connect({}, (frame) => {
-            isConnected = true;
-            stompClient.subscribe('/topic/canvas', (msg) => {
-                //const data = JSON.parse(msg.body);
-                const dataArray = JSON.parse(msg.body);
-                //setPixel(data.x, data.y, data.color, true);
-                dataArray.forEach(data => {
-                    setPixel(data.x, data.y, data.color, true);
-                });
-                renderCanvas();
-            });
-            fetch('/api/canvas/snapshot').then(res => res.json()).then(data => {
-                Object.entries(data).forEach(([key, color]) => {
-                    const [x, y] = key.split(':').map(Number);
-                    backCtx.fillStyle = color; backCtx.fillRect(x, y, 1, 1);
-                });
-                renderCanvas();
-            });
-        });
-    }
-    connectWebSocket();
-
-
-    initUI();
-    renderCanvas();
-    requestAnimationFrame(updateTimer);
+    // --- 7. 부팅 ---
+    initializeApp();
 </script>
 </body>
 </html>

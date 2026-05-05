@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>PaintOnLumia - 로그인</title>
+    <style>
+        body { background: #111; color: #FFF; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; }
+        .auth-box { background: #222; padding: 30px; border-radius: 8px; width: 300px; text-align: center; }
+        input { width: 90%; padding: 10px; margin: 10px 0; background: #333; border: 1px solid #555; color: #FFF; }
+        button { width: 100%; padding: 10px; background: #32CD32; border: none; color: #000; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    </style>
+</head>
+<body>
+<div class="auth-box">
+    <h2>PaintOnLumia</h2>
+    <input type="text" id="username" placeholder="아이디">
+    <input type="password" id="password" placeholder="비밀번호">
+    <button onclick="login()">로그인</button>
+    <button onclick="register()" style="background: #555; color: #FFF;">회원가입</button>
+</div>
+
+<script>
+    async function register() {
+        const u = document.getElementById('username').value;
+        const p = document.getElementById('password').value;
+        const res = await fetch('/api/auth/register', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, password: p })
+        });
+        alert(res.ok ? "가입 성공. 로그인해주세요." : await res.text());
+    }
+
+    async function login() {
+        const u = document.getElementById('username').value;
+        const p = document.getElementById('password').value;
+        const res = await fetch('/api/auth/login', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, password: p })
+        });
+        if (res.ok) {
+            sessionStorage.setItem('username', u);
+            window.location.href = '/index.html';
+        } else {
+            alert("로그인 실패");
+        }
+    }
+</script>
+</body>
+</html>
