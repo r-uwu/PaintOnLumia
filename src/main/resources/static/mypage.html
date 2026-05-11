@@ -10,36 +10,43 @@
             --text-main: #FFFFFF; --text-sub: #B0BEC5; --border-color: #37474F;
         }
         body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: var(--bg-main); font-family: 'Pretendard', sans-serif; color: var(--text-main); }
-        .studio-container { background: var(--bg-panel); padding: 30px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: row; gap: 30px; max-width: 800px; width: 90%; }
+        .studio-container { background: var(--bg-panel); padding: 30px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: row; gap: 30px; max-width: 900px; width: 95%; }
 
         .editor-section { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #111; padding: 15px; border-radius: 8px; border: 1px solid #222; }
 
         #profileCanvas {
-            width: 300px; height: 300px; background-color: #FFFFFF;
-            background-image: linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee), linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee);
-            background-size: 20px 20px; background-position: 0 0, 10px 10px;
+            width: 400px; height: 400px; background-color: #FFFFFF;
+            /* 모눈종이 배경 패턴 */
+            background-image: linear-gradient(45deg, #f0f0f0 25%, transparent 25%), linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f0f0f0 75%), linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+            background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
             border: 2px solid var(--border-color); cursor: crosshair; image-rendering: pixelated;
         }
 
-        .tools-section { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .tools-section { flex: 1; display: flex; flex-direction: column; }
         .header h1 { margin: 0 0 5px 0; color: var(--primary); font-size: 24px; }
-        .header p { margin: 0; font-size: 13px; color: var(--text-sub); line-height: 1.5; }
+        .header p { margin: 0 0 20px 0; font-size: 13px; color: var(--text-sub); line-height: 1.5; }
 
-        .control-group { margin-bottom: 20px; }
-        .control-group label { display: block; font-size: 13px; font-weight: bold; color: var(--text-sub); margin-bottom: 8px; }
+        /* 커스텀 팔레트 스타일 */
+        .palette-container {
+            display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px;
+            background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 20px;
+            max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color);
+        }
+        .palette-item {
+            aspect-ratio: 1; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: 0.2s;
+        }
+        .palette-item:hover { transform: scale(1.1); }
+        .palette-item.selected { border-color: var(--primary); box-shadow: 0 0 10px var(--primary); }
 
-        input[type="color"] { width: 100%; height: 45px; border: none; cursor: pointer; background: var(--bg-main); border-radius: 6px; padding: 2px; }
-
-        .btn { width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: var(--text-main); font-weight: bold; cursor: pointer; border-radius: 6px; transition: 0.2s; margin-bottom: 10px; font-size: 14px; }
+        .btn { width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: var(--text-main); font-weight: bold; cursor: pointer; border-radius: 6px; transition: 0.2s; margin-bottom: 8px; font-size: 14px; }
         .btn:hover { background: rgba(255,255,255,0.1); }
         .btn-primary { background: var(--primary); color: #000; border-color: var(--primary); }
         .btn-primary:hover { background: #00C853; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0, 230, 118, 0.3); }
         .btn-danger { color: var(--accent); border-color: rgba(255, 61, 0, 0.3); }
-        .btn-danger:hover { background: rgba(255, 61, 0, 0.1); }
 
         @media (max-width: 768px) {
-            .studio-container { flex-direction: column; padding: 20px; }
-            #profileCanvas { width: 250px; height: 250px; }
+            .studio-container { flex-direction: column; }
+            #profileCanvas { width: 300px; height: 300px; }
         }
     </style>
 </head>
@@ -47,32 +54,41 @@
 
 <div class="studio-container">
     <div class="editor-section">
-        <canvas id="profileCanvas" width="100" height="100"></canvas>
+        <canvas id="profileCanvas" width="50" height="50"></canvas>
     </div>
 
     <div class="tools-section">
         <div class="header">
             <h1>프로필 스튜디오</h1>
-            <p>100x100 해상도의 캔버스입니다.<br>나만의 도트를 찍어 프로필 아이콘을 설정하세요.</p>
+            <p>보유한 색상으로 나만의 프로필을 그려보세요.</p>
         </div>
 
-        <div class="control-group" style="margin-top: 20px;">
-            <label>브러시 색상</label>
-            <input type="color" id="colorPicker" value="#000000">
+        <div style="margin-bottom: 20px;">
+            <label style="font-size: 12px; font-weight: bold; color: var(--text-sub); display: block; margin-bottom: 5px;">닉네임 설정</label>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="nicknameInput" style="flex:1; padding:10px; background:#111; color:#FFF; border:1px solid var(--border-color); border-radius:4px;" placeholder="새 닉네임 입력">
+                <button class="btn btn-primary" style="margin:0; width:auto; padding: 10px 15px;" onclick="saveNickname()">적용</button>
+            </div>
         </div>
 
-        <div>
+        <label style="font-size: 12px; font-weight: bold; color: var(--text-sub); margin-bottom: 8px; display: block;">내 팔레트</label>
+        <div class="palette-container" id="userPalette">
+        </div>
+
+        <div style="margin-top: auto;">
             <button class="btn btn-danger" onclick="clearCanvas()">전체 지우기</button>
             <button class="btn btn-primary" onclick="saveProfile()">프로필 이미지 저장</button>
-            <button class="btn" onclick="window.location.href='/index.html'">메인 캔버스로 돌아가기</button>
+            <button class="btn" onclick="window.location.href='/index.html'">돌아가기 (단축키: Ctrl+Z 되돌리기)</button>
         </div>
     </div>
 </div>
 
 <script>
+    // ==========================================
+    // 1. 인증 및 상태 초기화
+    // ==========================================
     const currentUsername = sessionStorage.getItem('username');
     const jwtToken = sessionStorage.getItem('token');
-
     if (!currentUsername || !jwtToken) window.location.href = '/login.html';
 
     const authHeaders = {
@@ -80,69 +96,255 @@
         'Authorization': 'Bearer ' + jwtToken
     };
 
+    const SIZE = 100;
     const canvas = document.getElementById('profileCanvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    const colorPicker = document.getElementById('colorPicker');
+
+    let GameState = {
+        nickname: sessionStorage.getItem('nickname') || currentUsername
+    };
+    document.getElementById('nicknameInput').value = GameState.nickname;
+
+    // 닉네임 로컬 세션 적용 (서버에 연동하려면 프로필 API 등에 포함해야 함)
+    function saveNickname() {
+        const newName = document.getElementById('nicknameInput').value.trim();
+        if (!newName) return;
+        GameState.nickname = newName;
+        sessionStorage.setItem('nickname', newName);
+        alert(`닉네임이 '${newName}'(으)로 변경되었습니다.\n메인 캔버스로 돌아가면 적용됩니다.`);
+    }
+
+    // ==========================================
+    // 2. 가상 메모리 (Fast Pixel Map) 및 Undo
+    // ==========================================
+    // getImageData의 렉을 완벽하게 없애주는 1차원 메모리 배열
+    let pixelMap = new Array(SIZE * SIZE).fill('#FFFFFF');
+    const MAX_UNDO_HISTORY = 30;
+    let undoHistory = [];
+    let currentAction = null;
+    let currentStrokeCoords = new Set();
 
     let isDrawing = false;
     let currentColor = '#000000';
+    let lastMapX = null;
+    let lastMapY = null;
 
-    function clearCanvas() { ctx.clearRect(0, 0, 100, 100); }
-    colorPicker.addEventListener('input', (e) => currentColor = e.target.value);
+    function clearCanvas() {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, SIZE, SIZE);
+        pixelMap.fill('#FFFFFF'); // 가상 메모리도 초기화
+        undoHistory = [];
+    }
 
-    function getCanvasCoords(e) {
+    function rgbToHex(r, g, b) {
+        return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1).toUpperCase();
+    }
+
+    // 기존 이미지를 불러왔을 때 가상 메모리와 화면을 동기화하는 함수
+    function loadCanvasDataToMap() {
+        const imgData = ctx.getImageData(0, 0, SIZE, SIZE).data;
+        for (let i = 0; i < SIZE * SIZE; i++) {
+            const r = imgData[i * 4];
+            const g = imgData[i * 4 + 1];
+            const b = imgData[i * 4 + 2];
+            const a = imgData[i * 4 + 3];
+            pixelMap[i] = (a === 0) ? '#FFFFFF' : rgbToHex(r, g, b);
+        }
+    }
+
+    // ==========================================
+    // 3. 브레즌햄 알고리즘 & 그리기 핵심 로직
+    // ==========================================
+    function setPixel(x, y, color) {
+        if (x < 0 || x >= SIZE || y < 0 || y >= SIZE) return;
+
+        const index = y * SIZE + x;
+        const oldColor = pixelMap[index]; // 가상 메모리에서 색을 0.0001초만에 가져옴
+
+        if (oldColor === color) return;
+
+        const pixelKey = `${x},${y}`;
+        if (currentStrokeCoords.has(pixelKey)) return;
+        currentStrokeCoords.add(pixelKey);
+
+        if (currentAction) {
+            currentAction.pixels.push({ x, y, oldColor });
+        }
+
+        // 가상 메모리와 실제 화면 동시 업데이트
+        pixelMap[index] = color;
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, 1, 1);
+    }
+
+    function drawLine(x1, y1, x2, y2, color) {
+        const dx = Math.abs(x2 - x1);
+        const dy = Math.abs(y2 - y1);
+        const sx = (x1 < x2) ? 1 : -1;
+        const sy = (y1 < y2) ? 1 : -1;
+        let err = dx - dy;
+
+        while (true) {
+            setPixel(x1, y1, color);
+            if (x1 === x2 && y1 === y2) break;
+            const e2 = 2 * err;
+            if (e2 > -dy) { err -= dy; x1 += sx; }
+            if (e2 < dx) { err += dx; y1 += sy; }
+        }
+    }
+
+    function triggerUndo() {
+        if (undoHistory.length === 0) return alert("되돌릴 작업이 없습니다.");
+        const action = undoHistory.pop();
+        action.pixels.forEach(p => {
+            const index = p.y * SIZE + p.x;
+            pixelMap[index] = p.oldColor; // 가상 메모리 복구
+            ctx.fillStyle = p.oldColor;   // 실제 화면 복구
+            ctx.fillRect(p.x, p.y, 1, 1);
+        });
+    }
+
+    // ==========================================
+    // 4. 마우스 & 터치 이벤트 연결
+    // ==========================================
+    function getCoords(e) {
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
-        let clientX = e.clientX; let clientY = e.clientY;
-        if(e.touches && e.touches.length > 0) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
-        return { x: Math.floor((clientX - rect.left) * scaleX), y: Math.floor((clientY - rect.top) * scaleY) };
+        let clientX = e.clientX;
+        let clientY = e.clientY;
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        }
+        return {
+            x: Math.floor((clientX - rect.left) * scaleX),
+            y: Math.floor((clientY - rect.top) * scaleY)
+        };
     }
 
-    function draw(e) {
+    function startDraw(e) {
+        if (e.button !== undefined && e.button !== 0) return; // 좌클릭만
+        isDrawing = true;
+        const coords = getCoords(e);
+        lastMapX = coords.x;
+        lastMapY = coords.y;
+
+        currentStrokeCoords.clear();
+        currentAction = { pixels: [] };
+        setPixel(coords.x, coords.y, currentColor);
+    }
+
+    function doDraw(e) {
         if (!isDrawing) return;
-        const coords = getCanvasCoords(e);
-        ctx.fillStyle = currentColor; ctx.fillRect(coords.x, coords.y, 1, 1);
+        if (e.cancelable) e.preventDefault(); // 모바일 스크롤 방지
+        const coords = getCoords(e);
+
+        if (lastMapX !== coords.x || lastMapY !== coords.y) {
+            drawLine(lastMapX, lastMapY, coords.x, coords.y, currentColor);
+            lastMapX = coords.x;
+            lastMapY = coords.y;
+        }
     }
 
-    canvas.addEventListener('mousedown', (e) => { isDrawing = true; draw(e); });
-    window.addEventListener('mouseup', () => isDrawing = false);
-    canvas.addEventListener('mousemove', draw);
-    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); isDrawing = true; draw(e); }, { passive: false });
-    window.addEventListener('touchend', () => isDrawing = false);
-    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); }, { passive: false });
+    function endDraw() {
+        if (isDrawing && currentAction && currentAction.pixels.length > 0) {
+            undoHistory.push(currentAction);
+            if (undoHistory.length > MAX_UNDO_HISTORY) undoHistory.shift();
+        }
+        isDrawing = false;
+        currentAction = null;
+    }
 
-    async function loadExistingProfile() {
+    // PC 이벤트
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', doDraw);
+    window.addEventListener('mouseup', endDraw);
+
+    // 모바일 터치 이벤트
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', doDraw, { passive: false });
+    window.addEventListener('touchend', endDraw);
+
+    // Ctrl+Z 이벤트
+    window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            triggerUndo();
+        }
+    });
+
+    // ==========================================
+    // 5. 서버 데이터 연동
+    // ==========================================
+    async function initializeStudio() {
+        clearCanvas();
         try {
-            // ✨ 프로필 로드 시 헤더 추가
             const res = await fetch(`/api/user/info?username=${currentUsername}`, { headers: authHeaders });
-            if(res.status === 401 || res.status === 403) { alert("인증이 만료되었습니다."); window.location.href = '/login.html'; return; }
-            const data = await res.json();
-            if (data.profileIconBase64) {
+            if (!res.ok) throw new Error("Auth Failed");
+
+            const userData = await res.json();
+
+            // 1. 프로필 이미지 로드 및 가상 메모리 동기화
+            if (userData.profileIconBase64) {
                 const img = new Image();
-                img.onload = () => ctx.drawImage(img, 0, 0);
-                img.src = data.profileIconBase64;
+                img.onload = () => {
+                    ctx.drawImage(img, 0, 0);
+                    loadCanvasDataToMap(); // 렌더링된 이미지를 다시 배열에 넣어서 Undo가 안 깨지게 만듦
+                };
+                img.src = userData.profileIconBase64;
             }
-        } catch (e) { console.error("기존 프로필 로드 실패"); }
+
+            // 2. 닉네임 로드
+            if (userData.nickname) {
+                GameState.nickname = userData.nickname;
+                document.getElementById('nicknameInput').value = userData.nickname;
+                sessionStorage.setItem('nickname', userData.nickname);
+            }
+
+            // 3. 해금 팔레트 연동
+            const paletteContainer = document.getElementById('userPalette');
+            const unlockedColors = userData.unlockedColors ? userData.unlockedColors.split(',') : ['#000000'];
+
+            unlockedColors.forEach((color, index) => {
+                const item = document.createElement('div');
+                item.className = 'palette-item';
+                item.style.backgroundColor = color;
+                if (index === 0) {
+                    item.classList.add('selected');
+                    currentColor = color;
+                }
+
+                item.onclick = () => {
+                    document.querySelectorAll('.palette-item').forEach(el => el.classList.remove('selected'));
+                    item.classList.add('selected');
+                    currentColor = color;
+                };
+                paletteContainer.appendChild(item);
+            });
+
+        } catch (e) {
+            alert("세션이 만료되었습니다.");
+            window.location.href = '/login.html';
+        }
     }
-    loadExistingProfile();
 
     async function saveProfile() {
         const base64Image = canvas.toDataURL('image/png');
         try {
-            // ✨ 프로필 저장 시 헤더 추가
             const res = await fetch('/api/user/profile', {
                 method: 'POST',
                 headers: authHeaders,
                 body: JSON.stringify({ username: currentUsername, image: base64Image })
             });
-
             if (res.ok) {
-                alert("프로필이 저장되었습니다.");
+                alert("프로필이 저장되었습니다!");
                 window.location.href = '/index.html';
-            } else { alert("저장 실패"); }
-        } catch (e) { alert("서버 연결 오류"); }
+            }
+        } catch (e) { alert("저장 실패"); }
     }
+
+    initializeStudio();
 </script>
 </body>
 </html>
