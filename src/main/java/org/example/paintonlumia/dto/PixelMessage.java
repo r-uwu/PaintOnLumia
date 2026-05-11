@@ -13,4 +13,7 @@ public class PixelMessage {
     private String color;
     private int size;
     private String author;
+    private String title;
+    private String badges;
+    private String profile; //Base64이미지로
 }

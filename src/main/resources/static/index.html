@@ -91,9 +91,43 @@
             #mobileUndoBtn { display: flex; }
             #pcUndoBtn { display: none; }
         }
+
+        /* 상세 프로필 카드 디자인 */
+        .artist-card {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
+            width: 300px; background: var(--bg-panel); border: 1px solid var(--primary);
+            border-radius: 15px; padding: 25px; z-index: 2000; display: none;
+            box-shadow: 0 0 50px rgba(0, 230, 118, 0.3); text-align: center; transition: 0.3s;
+        }
+
+        .user-title-tag {
+            font-size: 16px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .artist-card.show { display: block; transform: translate(-50%, -50%) scale(1); }
+        .card-avatar { width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--primary); margin: 0 auto 15px; overflow: hidden; background: #333; image-rendering: pixelated; }
+        .card-nickname { font-size: 20px; font-weight: bold; color: var(--text-main); margin-bottom: 5px; }
+        .card-id { font-size: 13px; color: var(--text-sub); margin-bottom: 15px; }
+        .card-title { background: var(--primary); color: #000; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-bottom: 15px; display: inline-block; }
+        .badge-container { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+        .badge { background: rgba(255, 255, 255, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 11px; color: #FFD700; border: 1px solid rgba(255, 215, 0, 0.3); }
+        .close-btn { position: absolute; top: 10px; right: 10px; cursor: pointer; color: var(--text-sub); }
+
     </style>
 </head>
 <body>
+<div id="artistCard" class="artist-card">
+    <span class="close-btn" onclick="closeArtistCard()">✕</span>
+    <div class="card-avatar" id="cardAvatar"></div>
+    <div class="card-nickname" id="cardNickname">닉네임</div>
+    <div class="card-id" id="cardId">@userid</div>
+    <div class="card-title" id="cardTitle">타이틀 위치</div>
+    <div class="badge-container" id="cardBadges">
+        <span class="badge">🛡️ 초기 멤버</span>
+    </div>
+</div>
 
 <canvas id="displayCanvas"></canvas>
 <div id="toastContainer"></div>
@@ -117,12 +151,13 @@
         </div>
         <div class="profile-section" onclick="window.location.href='/mypage.html'" style="cursor: pointer;">
             <div class="profile-avatar" id="profileAvatar">U</div>
+
             <div class="profile-info">
-                <div class="profile-name">
-                    <span id="profileNickname">Nickname</span>
-                    <span class="profile-id" id="profileId">@userid</span>
+                <div class="profile-main-row" style="display: flex; align-items: center; gap: 8px;">
+                    <span id="profileTitle" class="user-title-tag">불러오는 중...</span>
+                    <span id="profileNickname" style="font-weight: bold; font-size: 16px;">Nickname</span>
                 </div>
-                <div class="profile-title">Lumia Artist</div>
+                <div class="profile-id" id="profileId" style="font-size: 12px; color: var(--text-sub); margin-top: 2px;">@userid</div>
             </div>
         </div>
 
@@ -240,14 +275,24 @@
     };
 
     const GameState = {
-        points: 0, pixelsDrawn: 0, uniqueColorsUsed: new Set(), currentMaxQuota: CONFIG.BASE_MAX_QUOTA,
-        unlockedColors: new Set(), favoriteColors: new Set(), nickname: currentUsername
+        points: 0,
+        pixelsDrawn: 0,
+        uniqueColorsUsed: new Set(),
+        currentMaxQuota: CONFIG.BASE_MAX_QUOTA,
+        unlockedColors: new Set(),
+        favoriteColors: new Set(),
+        nickname: currentUsername,
+        title: "불러오는 중...",
+        badges: "...",
+        profile: "",
+        unlockedBadges: new Set(),
+        unlockedTitles: new Set()
     };
 
     const Missions = [
-        { id: 1, title: '첫 걸음', desc: '픽셀 50개 그리기', target: 50, reward: 50, current: 0, completed: false, type: 'draw' },
-        { id: 2, title: '예술가', desc: '픽셀 200개 그리기', target: 200, reward: 100, current: 0, completed: false, type: 'draw' },
-        { id: 3, title: '다채로움', desc: '5가지 색상 사용', target: 5, reward: 80, current: 0, completed: false, type: 'color' }
+        { id: 1, title: '첫 걸음', desc: '픽셀 50개 그리기', target: 50, reward: 50, badgeReward: '시작이 반이다', current: 0, completed: false, type: 'draw' },
+        { id: 2, title: '예술가', desc: '픽셀 200개 그리기', target: 200, reward: 100, titleReward: '그리는게 즐거운', current: 0, completed: false, type: 'draw' },
+        { id: 3, title: '다채로움', desc: '5가지 색상 사용', target: 5, reward: 80, badgeReward: '🌈 띠아', current: 0, completed: false, type: 'color' }
     ];
 
     let currentColor = CONFIG.PALETTE_COLORS[0];
@@ -338,6 +383,20 @@
             handleAuthError(res);
 
             const userData = await res.json();
+
+            const nickname = userData.nickname || currentUsername;
+            document.getElementById('profileNickname').textContent = nickname;
+            document.getElementById('profileId').textContent = '@' + currentUsername;
+            document.getElementById('profileTitle').textContent = userData.title;
+
+            GameState.title = userData.title || "";
+            GameState.badges = userData.badges || "";
+            GameState.profile = userData.profileIconBase64 || "";
+
+            ui.profileNickname.textContent = GameState.nickname;
+            ui.profileId.textContent = '@' + currentUsername;
+
+
             isAdmin = (userData.role === 'ADMIN');
             if (isAdmin) document.getElementById('adminTabBtn').style.display = 'block';
 
@@ -352,6 +411,12 @@
 
             if (userData.unlockedColors) GameState.unlockedColors = new Set(userData.unlockedColors.split(',').filter(c => c));
             else GameState.unlockedColors = new Set(CONFIG.PALETTE_COLORS.slice(0, 12));
+
+            if (userData.unlockedBadges) {
+                GameState.unlockedBadges = new Set(userData.unlockedBadges.split(',').filter(b => b));
+            } else {
+                GameState.unlockedBadges = new Set(['새내기', '🛡️ 초기 멤버']);
+            }
 
             if (userData.favoriteColors) GameState.favoriteColors = new Set(userData.favoriteColors.split(',').filter(c => c));
 
@@ -394,11 +459,11 @@
             body: JSON.stringify({
                 username: currentUsername, currentQuota: currentQuota, maxQuota: GameState.currentMaxQuota,
                 points: GameState.points, lastUpdateTime: Date.now(),
-                unlockedColors: Array.from(GameState.unlockedColors).join(','), favoriteColors: Array.from(GameState.favoriteColors).join(',')
+                unlockedColors: Array.from(GameState.unlockedColors).join(','),
+                favoriteColors: Array.from(GameState.favoriteColors).join(','),
+                unlockedBadges: Array.from(GameState.unlockedBadges).join(',') // ✨ 추가됨!
             })
-        })
-            .then(res => { handleAuthError(res); if(res.ok && showNotification) showToast("서버 동기화 완료", "info"); })
-            .catch(()=>{});
+        }).then(res => { handleAuthError(res); if(res.ok && showNotification) showToast("서버 동기화 완료", "info"); }).catch(()=>{});
     }
 
     async function executeManualArchive() {
@@ -483,8 +548,14 @@
     }
 
     window.addEventListener('beforeunload', () => { if (stompClient && isConnected) { stompClient.send("/app/leave", {}, GameState.nickname); stompClient.disconnect(); } });
-    function flushPixelBuffer() { if (isConnected && stompClient && pixelBuffer.length > 0) { pixelBuffer.forEach(p => p.author = GameState.nickname); stompClient.send("/app/draw", {}, JSON.stringify(pixelBuffer)); pixelBuffer = []; } }
-
+    function flushPixelBuffer() {
+        if (isConnected && stompClient && pixelBuffer.length > 0) {
+            // author만 전송
+            pixelBuffer.forEach(p => p.author = currentUsername);
+            stompClient.send("/app/draw", {}, JSON.stringify(pixelBuffer));
+            pixelBuffer = [];
+        }
+    }
     // ==========================================
     // 6. UI 및 렌더링 로직
     // ==========================================
@@ -567,7 +638,25 @@
             if (!m.completed && m.type === type) {
                 if (type === 'draw') m.current = GameState.pixelsDrawn;
                 if (type === 'color') m.current = GameState.uniqueColorsUsed.size;
-                if (m.current >= m.target) { m.current = m.target; m.completed = true; GameState.points += m.reward; showToast(`🎉 미션 완료: ${m.title}! (+${m.reward}P)`, "success"); updateTopStatusUI(); }
+
+                if (m.current >= m.target) {
+                    m.current = m.target; m.completed = true; GameState.points += m.reward;
+
+                    let toastMsg = `🎉 미션 완료: ${m.title}! (+${m.reward}P)`;
+
+                    if (m.badgeReward && !GameState.unlockedBadges.has(m.badgeReward)) {
+                        GameState.unlockedBadges.add(m.badgeReward);
+                        toastMsg += `\n🏅 신규 배지 획득: [${m.badgeReward}]`;
+                    }
+                    if (m.titleReward) {
+                        GameState.unlockedTitles.add(m.titleReward);
+                        toastMsg += `\n✨ 신규 칭호 획득: [${m.titleReward}]`;
+                    }
+
+                    showToast(toastMsg, "success");
+                    updateTopStatusUI();
+                    syncUserData(false); //획득했으니 서버에 즉시 저장
+                }
                 updated = true;
             }
         });
@@ -749,7 +838,81 @@
 
     window.addEventListener('keydown', (e) => { if (e.ctrlKey && e.key.toLowerCase() === 'z') { e.preventDefault(); triggerUndo(); } });
     window.addEventListener('resize', renderCanvas);
-    ui.displayCanvas.addEventListener('contextmenu', e => e.preventDefault());
+    ui.displayCanvas.addEventListener('contextmenu', (e) => {
+        e.preventDefault(); // 기본 우클릭 메뉴 방지
+
+        const now = Date.now();
+        const c = getCoords(e.clientX, e.clientY);
+
+        // 더블 우클릭 감지 (500ms 이내에 같은 좌표 근처 우클릭 시)
+        if (now - lastRightClickTime < 500 &&
+            Math.abs(lastRightClickCoords.x - c.mx) < 2 &&
+            Math.abs(lastRightClickCoords.y - c.my) < 2) {
+
+            showArtistDetail(c.mx, c.my); // 상세 카드 띄우기
+
+        } else {
+            // 단일 우클릭: 기존처럼 간단 토스트 메시지
+            const authorId = pixelMetadataMap.get(`${c.mx},${c.my}`);
+            if (authorId && authorId !== "Unknown" && authorId !== "null" && authorId !== "undefined") {
+                showToast(`🎨 작성자 ID: @${authorId}`, "info");
+            } else {
+                showToast("아직 아무도 칠하지 않은 픽셀입니다.");
+            }
+        }
+
+        lastRightClickTime = now;
+        lastRightClickCoords = { x: c.mx, y: c.my };
+    });
+
+    async function showArtistDetail(x, y) {
+        const targetUsername = pixelMetadataMap.get(`${x},${y}`);
+
+        if (!targetUsername || targetUsername === "Unknown" || targetUsername === "null" || targetUsername === "undefined") {
+            return showToast("아직 정보가 없는 픽셀입니다.");
+        }
+
+        try {
+            const res = await fetch(`/api/user/info?username=${targetUsername}`, { headers: authHeaders });
+            if (!res.ok) throw new Error("유저 정보를 찾을 수 없음");
+
+            const data = await res.json();
+
+            // 불러온 데이터로 카드 채우기
+            const nickname = data.nickname || targetUsername;
+            const title = data.title || "title";
+            const badges = data.badges || "badges";
+
+            document.getElementById('cardNickname').textContent = nickname;
+            document.getElementById('cardId').textContent = `@${targetUsername}`;
+            document.getElementById('cardTitle').textContent = title;
+
+            // 배지 설정
+            const badgeBox = document.getElementById('cardBadges');
+            badgeBox.innerHTML = '';
+            badges.split(',').forEach(b => {
+                if (!b.trim()) return;
+                const span = document.createElement('span');
+                span.className = 'badge';
+                span.textContent = b.trim();
+                badgeBox.appendChild(span);
+            });
+
+            // 프로필 설정
+            const avatar = document.getElementById('cardAvatar');
+            if (data.profileIconBase64) {
+                avatar.innerHTML = `<img src="${data.profileIconBase64}" style="width:100%; height:100%; object-fit:cover;">`;
+            } else {
+                avatar.innerHTML = `<div style="line-height:80px; font-size:30px; background:#444; color:#fff;">${nickname[0]}</div>`;
+            }
+
+            // 카드 보여주기
+            document.getElementById('artistCard').classList.add('show');
+
+        } catch (error) {
+            showToast("유저 정보를 불러오는 데 실패했습니다.");
+        }
+    }
 
     // ==========================================
     // 9. 타이머 및 앱 초기화 실행
@@ -765,6 +928,14 @@
             document.getElementById('regenProgressBar').style.width = `100%`; document.getElementById('regenTimeDisplay').textContent = "0.0"; lastRegenTime = Date.now();
         }
         requestAnimationFrame(updateTimer);
+    }
+
+    // 카드 관련
+    let lastRightClickTime = 0;
+    let lastRightClickCoords = { x: -1, y: -1 };
+
+    function closeArtistCard() {
+        document.getElementById('artistCard').classList.remove('show');
     }
 
     // 앱 시작점

@@ -42,23 +42,33 @@ public class UserController {
             existingUser.setUnlockedColors(clientState.getUnlockedColors());
             existingUser.setFavoriteColors(clientState.getFavoriteColors());
             existingUser.setLastUpdateTime(System.currentTimeMillis());
+            existingUser.setUnlockedBadges(clientState.getUnlockedBadges());
+            existingUser.setLastUpdateTime(System.currentTimeMillis());
 
             userRepository.save(existingUser);
         }
     }
 
+    // ✨ 3. 프로필 및 설정 업데이트 API (이미지 + 텍스트 정보 통합 저장)
     @PostMapping("/profile")
     public ResponseEntity<?> updateProfile(@RequestBody Map<String, String> payload) {
         String username = payload.get("username");
-        String base64Image = payload.get("image"); // 프론트엔드에서 보낸 캔버스 이미지 데이터
-
         UserEntity user = userRepository.findById(username).orElse(null);
+
         if (user == null) {
             return ResponseEntity.badRequest().body("유저를 찾을 수 없습니다.");
         }
 
-        // 유저 엔티티에 프로필 이미지(Base64) 저장
-        user.setProfileIconBase64(base64Image);
+        // 1. 프로필 이미지 업데이트 (데이터가 있을 때만)
+        if (payload.containsKey("image") && payload.get("image") != null && !payload.get("image").isEmpty()) {
+            user.setProfileIconBase64(payload.get("image"));
+        }
+
+        // 2. 텍스트 정보 업데이트
+        if (payload.containsKey("nickname")) user.setNickname(payload.get("nickname"));
+        if (payload.containsKey("title")) user.setTitle(payload.get("title"));
+        if (payload.containsKey("badges")) user.setBadges(payload.get("badges"));
+
         userRepository.save(user);
 
         return ResponseEntity.ok("프로필이 성공적으로 업데이트되었습니다.");

@@ -41,4 +41,9 @@ public class UserEntity {
     private int points;
     private long lastUpdateTime;
 
+    private String title;
+    private String badges;
+    private String unlockedBadges;
+    private String unlockedTitles;
+
 }
