@@ -32,11 +32,15 @@ public class UserController {
         UserEntity existingUser = userRepository.findById(clientState.getUsername()).orElse(null);
 
         if (existingUser != null) {
-            // 프론트엔드에서 비밀번호를 보내지 않으므로, DB에 있던 기존 비밀번호를 유지시킴
-            clientState.setPassword(existingUser.getPassword());
-            clientState.setLastUpdateTime(System.currentTimeMillis());
+            // 객체로 덮어쓰지 않고 필요한 값만 업데이트하게 변경,,,
+            existingUser.setCurrentQuota(clientState.getCurrentQuota());
+            existingUser.setMaxQuota(clientState.getMaxQuota());
+            existingUser.setPoints(clientState.getPoints());
+            existingUser.setUnlockedColors(clientState.getUnlockedColors());
+            existingUser.setFavoriteColors(clientState.getFavoriteColors());
+            existingUser.setLastUpdateTime(System.currentTimeMillis());
 
-            userRepository.save(clientState);
+            userRepository.save(existingUser);
         }
     }
 }

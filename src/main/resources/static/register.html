@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaintOnLumia - Register</title>
+    <style>
+        :root {
+            --bg-main: #141418; --bg-panel: #1E1E24; --primary: #00E676;
+            --text-main: #FFFFFF; --text-sub: #B0BEC5; --border-color: #37474F;
+        }
+        body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: var(--bg-main); font-family: 'Pretendard', sans-serif; color: var(--text-main); }
+        .auth-container { background: var(--bg-panel); padding: 40px; border-radius: 12px; border: 1px solid var(--border-color); width: 100%; max-width: 360px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
+        .logo { font-size: 24px; font-weight: bold; color: var(--text-main); margin-bottom: 5px; }
+        .subtitle { font-size: 13px; color: var(--primary); margin-bottom: 30px; font-weight: bold; }
+        .input-group { margin-bottom: 15px; text-align: left; }
+        .input-group label { display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 5px; font-weight: bold; }
+        .input-group input { width: 100%; padding: 12px; background: #111; border: 1px solid var(--border-color); color: #FFF; border-radius: 6px; box-sizing: border-box; transition: 0.2s; }
+        .input-group input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 8px rgba(0, 230, 118, 0.2); }
+        .btn { width: 100%; padding: 14px; background: #FFF; color: #000; border: none; border-radius: 6px; font-weight: bold; font-size: 15px; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+        .btn:hover { background: #E6E6E6; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(255, 255, 255, 0.2); }
+        .link-text { margin-top: 20px; font-size: 13px; color: var(--text-sub); }
+        .link-text a { color: var(--text-main); text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="auth-container">
+    <div class="logo">새로운 아티스트 등록</div>
+    <div class="subtitle">PaintOnLumia 시작하기</div>
+
+    <div class="input-group">
+        <label for="username">사용할 아이디</label>
+        <input type="text" id="username" placeholder="영문/숫자 조합" autocomplete="off">
+    </div>
+    <div class="input-group">
+        <label for="password">비밀번호</label>
+        <input type="password" id="password" placeholder="비밀번호 입력">
+    </div>
+    <div class="input-group">
+        <label for="passwordConfirm">비밀번호 확인</label>
+        <input type="password" id="passwordConfirm" placeholder="비밀번호 재입력">
+    </div>
+
+    <button class="btn" onclick="attemptRegister()">가입 완료하기</button>
+
+    <div class="link-text">
+        이미 계정이 있으신가요? <a href="/login.html">로그인으로 돌아가기</a>
+    </div>
+</div>
+
+<script>
+    async function attemptRegister() {
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+        const passwordConfirm = document.getElementById('passwordConfirm').value.trim();
+
+        if (!username || !password) return alert("아이디와 비밀번호를 입력해주세요.");
+        if (password !== passwordConfirm) return alert("비밀번호가 일치하지 않습니다.");
+
+        try {
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            if (res.ok) {
+                alert("회원가입이 완료되었습니다. 로그인 해주세요.");
+                window.location.href = '/login.html';
+            } else {
+                const msg = await res.text();
+                alert("가입 실패: " + msg);
+            }
+        } catch (e) {
+            alert("서버와 통신할 수 없습니다.");
+        }
+    }
+</script>
+</body>
+</html>
