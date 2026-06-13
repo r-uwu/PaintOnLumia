@@ -138,6 +138,7 @@
         <button id="mobModeDraw" class="mode-btn active draw" onclick="setMode('draw')">✏️ 그리기</button>
         <button id="mobModePan" class="mode-btn" onclick="setMode('pan')">🖐 이동</button>
         <button id="mobModeObs" class="mode-btn" onclick="setMode('observe')">👀 구경</button>
+        <button class="floating-btn" onclick="toggleTemplate()">🗺️ 도안 켜기/끄기</button>
     </div>
     <button class="floating-btn" onclick="toggleSidebar()">☰ 메뉴 열기</button>
 </div>
@@ -200,6 +201,7 @@
             <div class="control-group-header">
                 <label>현재 색상 및 즐겨찾기</label>
                 <button id="favToggleBtn" class="fav-toggle-btn" onclick="toggleFavoriteCurrentColor()">⭐ 추가</button>
+                <button class="action-btn secondary-btn" onclick="toggleTemplate()">🗺️ 도안(밑그림) 켜기/끄기</button>
             </div>
             <div id="favPalette" style="margin-bottom: 10px; min-height: 28px;"></div> <!-- 즐겨찾기 팔레트 -->
         </div>
@@ -307,6 +309,16 @@
     const BATCH_INTERVAL_MS = 50;
     let isAdmin = false;
 
+    let showTemplate = false;
+    const templateImg = new Image();
+    templateImg.src = 'eternal_return_map_template.png';
+
+    function toggleTemplate() {
+        showTemplate = !showTemplate;
+        renderCanvas();
+        showToast(showTemplate ? "밑그림이 활성화되었습니다." : "밑그림이 비활성화되었습니다.", "info");
+    }
+
     // ==========================================
     // 2. DOM 요소 연결 및 캔버스 설정
     // ==========================================
@@ -324,8 +336,8 @@
     const displayCtx = ui.displayCanvas.getContext('2d', { alpha: false });
     const backCanvas = document.createElement('canvas');
     backCanvas.width = CONFIG.MAP_SIZE; backCanvas.height = CONFIG.MAP_SIZE;
-    const backCtx = backCanvas.getContext('2d', { alpha: false, willReadFrequently: true });
-    backCtx.fillStyle = '#FFFFFF'; backCtx.fillRect(0, 0, CONFIG.MAP_SIZE, CONFIG.MAP_SIZE);
+    const backCtx = backCanvas.getContext('2d', { willReadFrequently: true });
+    backCtx.clearRect(0, 0, CONFIG.MAP_SIZE, CONFIG.MAP_SIZE);
 
     // ==========================================
     // 3. 유틸리티 함수 및 오디오
@@ -585,11 +597,31 @@
     }
 
     function renderCanvas() {
-        ui.displayCanvas.width = window.innerWidth; ui.displayCanvas.height = window.innerHeight;
-        displayCtx.imageSmoothingEnabled = false; displayCtx.fillStyle = "#111";
+        ui.displayCanvas.width = window.innerWidth;
+        ui.displayCanvas.height = window.innerHeight;
+
+        displayCtx.imageSmoothingEnabled = false;
+        displayCtx.fillStyle = "#111";
         displayCtx.fillRect(0, 0, ui.displayCanvas.width, ui.displayCanvas.height);
-        const vw = ui.displayCanvas.width / zoom, vh = ui.displayCanvas.height / zoom;
-        const sx = camX - vw / 2, sy = camY - vh / 2;
+
+        const vw = ui.displayCanvas.width / zoom;
+        const vh = ui.displayCanvas.height / zoom;
+        const sx = camX - vw / 2;
+        const sy = camY - vh / 2;
+
+        /* Draw Template or Default White Background */
+        if (showTemplate && templateImg.complete) {
+            displayCtx.drawImage(templateImg, sx, sy, vw, vh, 0, 0, ui.displayCanvas.width, ui.displayCanvas.height);
+        } else {
+            const screenX = -sx * zoom;
+            const screenY = -sy * zoom;
+            const screenW = CONFIG.MAP_SIZE * zoom;
+            const screenH = CONFIG.MAP_SIZE * zoom;
+            displayCtx.fillStyle = "#FFFFFF";
+            displayCtx.fillRect(screenX, screenY, screenW, screenH);
+        }
+
+        /* Draw User Pixels Over the Background */
         displayCtx.drawImage(backCanvas, sx, sy, vw, vh, 0, 0, ui.displayCanvas.width, ui.displayCanvas.height);
     }
 
