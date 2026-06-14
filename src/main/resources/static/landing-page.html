@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PaintOnLumia - 루미아 섬의 실시간 픽셀 아트 캔버스</title>
+    <style>
+        :root {
+            --bg-main: #0B0C10;
+            --bg-panel: #1F2833;
+            --primary: #66FCF1;
+            --primary-dim: #45A29E;
+            --text-main: #FFFFFF;
+            --text-sub: #C5C6C7;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            overflow-x: hidden;
+        }
+
+        /* 픽셀 모눈종이 배경 애니메이션 */
+        .bg-grid {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1;
+            background-image:
+                    linear-gradient(rgba(102, 252, 241, 0.05) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(102, 252, 241, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+            animation: panBg 20s linear infinite;
+        }
+        @keyframes panBg { 0% { background-position: 0 0; } 100% { background-position: 30px 30px; } }
+
+        /* 네비게이션 바 */
+        nav {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 50px; background: rgba(11, 12, 16, 0.8);
+            backdrop-filter: blur(10px); position: fixed; width: 100%; top: 0; z-index: 100;
+            border-bottom: 1px solid rgba(102, 252, 241, 0.2);
+        }
+        .nav-logo { font-size: 24px; font-weight: 900; color: var(--primary); letter-spacing: 1px; text-shadow: 0 0 10px rgba(102, 252, 241, 0.5); }
+        .nav-links a { color: var(--text-main); text-decoration: none; margin-left: 20px; font-weight: bold; font-size: 14px; transition: 0.3s; }
+        .nav-links a:hover { color: var(--primary); }
+
+        /* 히어로 섹션 */
+        .hero {
+            height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; padding: 0 20px;
+        }
+        .hero h1 {
+            font-size: 60px; font-weight: 900; margin-bottom: 20px; line-height: 1.2;
+            background: linear-gradient(to right, #ffffff, var(--primary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .hero p { font-size: 18px; color: var(--text-sub); margin-bottom: 40px; max-width: 600px; line-height: 1.6; }
+
+        /* 버튼 스타일 */
+        .btn-group { display: flex; gap: 20px; }
+        .btn {
+            padding: 16px 40px; font-size: 18px; font-weight: bold; border-radius: 8px;
+            cursor: pointer; transition: all 0.3s ease; text-decoration: none; display: inline-block;
+        }
+        .btn-primary {
+            background-color: var(--primary); color: #000; border: none;
+            box-shadow: 0 0 20px rgba(102, 252, 241, 0.4);
+        }
+        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 0 30px rgba(102, 252, 241, 0.6); }
+        .btn-outline {
+            background-color: transparent; color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+        .btn-outline:hover { background-color: rgba(102, 252, 241, 0.1); transform: translateY(-3px); }
+
+        /* 기능 소개 섹션 */
+        .features { padding: 100px 20px; background: #0B0C10; text-align: center; }
+        .features h2 { font-size: 36px; color: var(--primary); margin-bottom: 60px; }
+
+        .feature-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px; max-width: 1200px; margin: 0 auto;
+        }
+        .feature-card {
+            background: var(--bg-panel); padding: 40px 30px; border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;
+        }
+        .feature-card:hover { transform: translateY(-10px); border-color: var(--primary-dim); }
+        .feature-icon { font-size: 40px; margin-bottom: 20px; }
+        .feature-title { font-size: 22px; font-weight: bold; margin-bottom: 15px; color: #FFF; }
+        .feature-desc { font-size: 15px; color: var(--text-sub); line-height: 1.6; }
+
+        /* 푸터 */
+        footer { text-align: center; padding: 40px; border-top: 1px solid rgba(255,255,255,0.05); color: var(--text-sub); font-size: 14px; }
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 40px; }
+            .btn-group { flex-direction: column; width: 100%; max-width: 300px; gap: 15px; }
+            nav { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<nav>
+    <div class="nav-logo">PaintOnLumia</div>
+    <div class="nav-links" id="navLinks">
+    </div>
+</nav>
+
+<section class="hero">
+    <h1>루미아 섬에 당신만의<br>도트를 남겨보세요.</h1>
+    <p>2000x2000의 거대한 캔버스에서 수많은 아티스트들과 실시간으로 픽셀 아트를 완성하세요. 미션을 달성하고 희귀한 칭호와 배지를 수집해 보세요.</p>
+    <div class="btn-group">
+        <a href="javascript:void(0)" onclick="enterGame()" class="btn btn-primary">🎮 섬으로 입장하기</a>
+        <a href="/login.html" class="btn btn-outline" id="guestBtn">로그인 / 회원가입</a>
+    </div>
+</section>
+
+<section class="features" id="features">
+    <h2>어떤 것들을 할 수 있나요?</h2>
+    <div class="feature-grid">
+        <div class="feature-card">
+            <div class="feature-icon">🌐</div>
+            <div class="feature-title">실시간 동시성 캔버스</div>
+            <div class="feature-desc">서버 지연 없는 부드러운 픽셀 드로잉! 다른 아티스트들이 도트를 찍는 과정을 실시간으로 지켜보고 함께 협력하세요.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🏅</div>
+            <div class="feature-title">업적 & 배지 시스템</div>
+            <div class="feature-desc">픽셀을 찍고 새로운 색상을 해금하며 미션을 완료하세요. 당신의 노력은 멋진 칭호와 한정판 배지로 증명됩니다.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🎨</div>
+            <div class="feature-title">마이 프로필 스튜디오</div>
+            <div class="feature-desc">해금한 색상을 이용해 나만의 프로필 아이콘을 직접 그려보세요. 캔버스 위 내 픽셀을 남들이 우클릭하면 화려한 프로필이 나타납니다.</div>
+        </div>
+    </div>
+</section>
+
+<footer>
+    &copy; 2026 PaintOnLumia Project. All rights reserved.<br>
+    Developed by Lumia Artist.
+</footer>
+
+<script>
+    // 세션 체크
+    const token = sessionStorage.getItem('token');
+    const username = sessionStorage.getItem('username');
+
+    // 네비게이션 및 버튼 동적 렌더링
+    window.onload = () => {
+        const navLinks = document.getElementById('navLinks');
+        const guestBtn = document.getElementById('guestBtn');
+
+        if (token && username) {
+            navLinks.innerHTML = `
+                    <span style="color:var(--text-sub); margin-right:15px;">환영합니다, <b>@${username}</b>님</span>
+                    <a href="/mypage.html">마이페이지</a>
+                `;
+            guestBtn.style.display = 'none'; // 로그인 상태면 회원가입 버튼 숨김
+        } else {
+            navLinks.innerHTML = `
+                    <a href="/login.html">로그인</a>
+                    <a href="/register.html">회원가입</a>
+                `;
+        }
+    };
+
+    // 게임 입장 로직
+    function enterGame() {
+        if (token && username) {
+            // 로그인 되어 있으면 바로 캔버스로 이동
+            window.location.href = '/index.html';
+        } else {
+            // 로그인 안 되어 있으면 로그인 페이지로 유도
+            alert("루미아 섬에 입장하려면 로그인이 필요합니다!");
+            window.location.href = '/login.html';
+        }
+    }
+</script>
+</body>
+</html>
