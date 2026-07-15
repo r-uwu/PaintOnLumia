@@ -40,10 +40,22 @@
         .panel.active { display: block; }
 
         .control-group { margin-bottom: 20px; }
-        .control-group-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .control-group-header {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
         .control-group label { font-size: 13px; color: var(--text-sub); font-weight: bold; margin: 0; }
+        .button-container {
+            display: flex;
+            gap: 8px;
+        }
 
-        .fav-toggle-btn { background: rgba(255,255,255,0.1); border: 1px solid var(--border-color); color: #FFF; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; transition: 0.2s; }
+
+        .fav-toggle-btn { width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 10px; transition: 0.2s; font-size: 12px; white-space: nowrap; }
+        .fav-toggle-btn:hover { background: var(--primary); border-color: var(--primary); background: rgba(255,255,255,0.1); color: #FFF;}
         .fav-toggle-btn.active { background: #FFD700; color: #000; border-color: #FFD700; }
 
         #palette, #favPalette { display: grid; grid-template-columns: repeat(auto-fill, minmax(24px, 1fr)); gap: 6px; }
@@ -55,7 +67,7 @@
 
         input[type="range"] { width: 100%; accent-color: var(--primary); cursor: pointer; }
 
-        .action-btn { width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 10px; transition: 0.2s; font-size: 14px; }
+        .action-btn { width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 10px; transition: 0.2s; font-size: 12px; white-space: nowrap; }
         .action-btn:hover { background: var(--primary); color: #000; border-color: var(--primary); }
         .secondary-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: var(--text-main); }
         .secondary-btn:hover { background: rgba(255,255,255,0.1); color: #FFF; }
@@ -199,15 +211,18 @@
 
         <div class="control-group">
             <div class="control-group-header">
-                <label>현재 색상 및 즐겨찾기</label>
-                <button id="favToggleBtn" class="fav-toggle-btn" onclick="toggleFavoriteCurrentColor()">⭐ 추가</button>
-                <button class="action-btn secondary-btn" onclick="toggleTemplate()">🗺️ 도안(밑그림) 켜기/끄기</button>
+                <label>옵션</label>
+
+                <div class="button-container">
+                    <button id="favToggleBtn" class="fav-toggle-btn" onclick="toggleFavoriteCurrentColor()">⭐ 색상 즐겨찾기</button>
+                    <button class="action-btn secondary-btn" onclick="toggleTemplate()">🗺️ 그림 켜기/끄기</button>
+                </div>
             </div>
-            <div id="favPalette" style="margin-bottom: 10px; min-height: 28px;"></div> <!-- 즐겨찾기 팔레트 -->
+            <div id="favPalette" style="margin-bottom: 10px; min-height: 28px;"></div>
         </div>
 
         <div class="control-group">
-            <label>전체 색상 팔레트 <span style="font-size:10px; font-weight:normal; color:#FFD700;">(클릭 시 50P 해금)</span></label>
+            <label>전체 색상 팔레트 <span style="font-size:10px; font-weight:normal; color:#FFD700;">(클릭 시 50P 소모해서 해금)</span></label>
             <div id="palette"></div>
         </div>
 
@@ -236,8 +251,8 @@
     <div id="panel-admin" class="panel">
         <div class="control-group">
             <label style="color: #FF3D00;">👑 시스템 관리자 메뉴</label>
-            <input type="text" id="archiveNameInput" placeholder="아카이브 제목 입력 (예: 시즌1 종료)" style="width: 100%; padding: 10px; margin-bottom: 10px; background: #111; color: #FFF; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
-            <button class="action-btn" style="background: #FF3D00; border-color: #FF3D00;" onclick="executeManualArchive()">📸 현재 캔버스 아카이브 (박제)</button>
+            <input type="text" id="archiveNameInput" placeholder="아카이브 제목 입력" style="width: 100%; padding: 10px; margin-bottom: 10px; background: #111; color: #FFF; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
+            <button class="action-btn" style="background: #FF3D00; border-color: #FF3D00;" onclick="executeManualArchive()">📸 현재 캔버스 아카이브 (백업하기)</button>
         </div>
         <div class="control-group" style="font-size: 11px; color: var(--text-sub); line-height: 1.5;">
             * 아카이브는 현재 캔버스의 모든 픽셀 데이터를 영구 보존합니다. 데이터 용량이 크므로 남용하지 마세요.
@@ -650,8 +665,8 @@
     }
 
     function updateFavToggleBtnUI() {
-        if (GameState.favoriteColors.has(currentColor)) { ui.favToggleBtn.classList.add('active'); ui.favToggleBtn.textContent = '⭐ 해제'; }
-        else { ui.favToggleBtn.classList.remove('active'); ui.favToggleBtn.textContent = '⭐ 추가'; }
+        if (GameState.favoriteColors.has(currentColor)) { ui.favToggleBtn.classList.add('active'); ui.favToggleBtn.textContent = '⭐ 색상 즐겨찾기 해제'; }
+        else { ui.favToggleBtn.classList.remove('active'); ui.favToggleBtn.textContent = '⭐ 색상 즐겨찾기'; }
     }
 
     function renderMissions() {
