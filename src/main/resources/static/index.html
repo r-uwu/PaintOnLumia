@@ -40,26 +40,16 @@
         .panel.active { display: block; }
 
         .control-group { margin-bottom: 20px; }
-        .control-group-header {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 8px;
-            margin-bottom: 10px;
-        }
+        .control-group-header { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
         .control-group label { font-size: 13px; color: var(--text-sub); font-weight: bold; margin: 0; }
-        .button-container {
-            display: flex;
-            gap: 8px;
-        }
-
+        .button-container { display: flex; gap: 8px; }
 
         .fav-toggle-btn { width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 10px; transition: 0.2s; font-size: 12px; white-space: nowrap; }
         .fav-toggle-btn:hover { background: var(--primary); border-color: var(--primary); background: rgba(255,255,255,0.1); color: #FFF;}
         .fav-toggle-btn.active { background: #FFD700; color: #000; border-color: #FFD700; }
 
         #palette, #favPalette { display: grid; grid-template-columns: repeat(auto-fill, minmax(24px, 1fr)); gap: 6px; }
-        .palette-btn { width: 100%; aspect-ratio: 1; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: all 0.1s; position: relative; }
+        .palette-btn { width: 100%; aspect-ratio: 1; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: all 0.1s; position: relative; overflow: hidden; }
         .palette-btn:hover { transform: scale(1.1); box-shadow: 0 0 6px rgba(255,255,255,0.4); z-index: 2; }
         .palette-btn.selected { border: 2px solid #FFF; transform: scale(1.15); box-shadow: 0 0 10px rgba(0,0,0,0.6); z-index: 3; }
         .palette-btn.locked { opacity: 0.3; filter: grayscale(80%); }
@@ -104,7 +94,6 @@
             #pcUndoBtn { display: none; }
         }
 
-        /* 상세 프로필 카드 디자인 */
         .artist-card {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
             width: 300px; background: var(--bg-panel); border: 1px solid var(--primary);
@@ -112,12 +101,7 @@
             box-shadow: 0 0 50px rgba(0, 230, 118, 0.3); text-align: center; transition: 0.3s;
         }
 
-        .user-title-tag {
-            font-size: 16px;
-            font-weight: bold;
-            white-space: nowrap;
-        }
-
+        .user-title-tag { font-size: 16px; font-weight: bold; white-space: nowrap; }
         .artist-card.show { display: block; transform: translate(-50%, -50%) scale(1); }
         .card-avatar { width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--primary); margin: 0 auto 15px; overflow: hidden; background: #333; image-rendering: pixelated; }
         .card-nickname { font-size: 20px; font-weight: bold; color: var(--text-main); margin-bottom: 5px; }
@@ -157,14 +141,12 @@
 
 <div id="sidebar">
     <div class="header">
-
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <div style="margin: 0; font-size: 18px; font-weight: bold; color: var(--text-main); letter-spacing: 1px;">PaintOnLumia</div>
             <button onclick="logout()" style="background: rgba(255,255,255,0.1); border: 1px solid var(--border-color); color: var(--text-sub); border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; transition: 0.2s;">로그아웃</button>
         </div>
         <div class="profile-section" onclick="window.location.href='/mypage.html'" style="cursor: pointer;">
             <div class="profile-avatar" id="profileAvatar">U</div>
-
             <div class="profile-info">
                 <div class="profile-main-row" style="display: flex; align-items: center; gap: 8px;">
                     <span id="profileTitle" class="user-title-tag">불러오는 중...</span>
@@ -212,7 +194,6 @@
         <div class="control-group">
             <div class="control-group-header">
                 <label>옵션</label>
-
                 <div class="button-container">
                     <button id="favToggleBtn" class="fav-toggle-btn" onclick="toggleFavoriteCurrentColor()">⭐ 색상 즐겨찾기</button>
                     <button class="action-btn secondary-btn" onclick="toggleTemplate()">🗺️ 그림 켜기/끄기</button>
@@ -245,9 +226,8 @@
             <button class="action-btn" onclick="shopBuyRefill()">🔋 픽셀 즉시 충전 (50P)</button>
             <button class="action-btn" onclick="shopBuyMaxQuota()">🎒 최대 쿼터 +50 (150P)</button>
         </div>
-
     </div>
-    <!-- 관리자 전용 탭 -->
+
     <div id="panel-admin" class="panel">
         <div class="control-group">
             <label style="color: #FF3D00;">👑 시스템 관리자 메뉴</label>
@@ -261,16 +241,11 @@
 </div>
 
 <script>
-    // ==========================================
-    // 1. 인증 및 전역 변수 초기화
-    // ==========================================
     const currentUsername = sessionStorage.getItem('username');
     const jwtToken = sessionStorage.getItem('token');
 
-    // 토큰이나 아이디가 없으면 로그인 페이지로 강제 이동
     if (!currentUsername || !jwtToken) window.location.href = '/login.html';
 
-    // API 통신 시 항상 포함해야 하는 헤더 설정
     const authHeaders = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + jwtToken
@@ -279,14 +254,15 @@
     const CONFIG = {
         MAP_SIZE: 2000, BASE_MAX_QUOTA: 100, REGEN_TIME_MS: 10000, UNLOCK_COST: 50,
         PALETTE_COLORS: [
-            /* 1. 무채색 및 뉴트럴 톤 */ '#000000', '#1A1A1B', '#333333', '#555555', '#7F8C8D', '#BDC3C7', '#E0E0E0', '#FFFFFF',
-            /* 2. 레드, 코랄, 로즈 계열 */ '#E74C3C', '#C0392B', '#FF5E5E', '#FF8F8F', '#FF2E63', '#FB3640', '#D72638', '#A91D3A',
-            /* 3. 오렌지, 테라코타, 브라운 */ '#E67E22', '#D35400', '#F39C12', '#FFCC00', '#8B4513', '#A0522D', '#D2691E', '#CD7F32',
-            /* 4. 옐로우, 올리브, 라임 */ '#F1C40F', '#D4AC0D', '#A2D149', '#556B2F', '#6B8E23', '#9ACD32', '#BFFF00', '#E1E100',
-            /* 5. 그린, 민트, 에메랄드 */ '#2ECC71', '#27AE60', '#16A085', '#00FFAB', '#1ABC9C', '#009688', '#48C9B0', '#A3E4D7',
-            /* 6. 블루, 스카이, 시안 */ '#3498DB', '#2980B9', '#00DFFC', '#00A8CC', '#1565C0', '#4A90E2', '#5DADE2', '#AED6F1',
-            /* 7. 퍼플, 인디고, 나이트 */ '#9B59B6', '#8E44AD', '#3F51B5', '#5E35B1', '#4B0082', '#2C3E50', '#34495E', '#1C2833',
-            /* 8. 파스텔 및 네온 강조색 */ '#FAD0C4', '#FBC2EB', '#A18CD1', '#84FAB0', '#FF00FF', '#00FF00', '#FFFF00', '#FF4500'
+            'transparent',
+            '#000000', '#1A1A1B', '#333333', '#555555', '#7F8C8D', '#BDC3C7', '#E0E0E0', '#FFFFFF',
+            '#E74C3C', '#C0392B', '#FF5E5E', '#FF8F8F', '#FF2E63', '#FB3640', '#D72638', '#A91D3A',
+            '#E67E22', '#D35400', '#F39C12', '#FFCC00', '#8B4513', '#A0522D', '#D2691E', '#CD7F32',
+            '#F1C40F', '#D4AC0D', '#A2D149', '#556B2F', '#6B8E23', '#9ACD32', '#BFFF00', '#E1E100',
+            '#2ECC71', '#27AE60', '#16A085', '#00FFAB', '#1ABC9C', '#009688', '#48C9B0', '#A3E4D7',
+            '#3498DB', '#2980B9', '#00DFFC', '#00A8CC', '#1565C0', '#4A90E2', '#5DADE2', '#AED6F1',
+            '#9B59B6', '#8E44AD', '#3F51B5', '#5E35B1', '#4B0082', '#2C3E50', '#34495E', '#1C2833',
+            '#FAD0C4', '#FBC2EB', '#A18CD1', '#84FAB0', '#FF00FF', '#00FF00', '#FFFF00', '#FF4500'
         ],
         DEV_MODE: true, DEV_START_QUOTA: 9999, DEV_START_MAX_QUOTA: 9999, DEV_START_POINTS: 5000
     };
@@ -334,9 +310,6 @@
         showToast(showTemplate ? "밑그림이 활성화되었습니다." : "밑그림이 비활성화되었습니다.", "info");
     }
 
-    // ==========================================
-    // 2. DOM 요소 연결 및 캔버스 설정
-    // ==========================================
     const ui = {
         quota: document.getElementById('quotaDisplay'), maxQuota: document.getElementById('maxQuotaDisplay'),
         points: document.getElementById('pointsDisplay'), palette: document.getElementById('palette'),
@@ -354,9 +327,6 @@
     const backCtx = backCanvas.getContext('2d', { willReadFrequently: true });
     backCtx.clearRect(0, 0, CONFIG.MAP_SIZE, CONFIG.MAP_SIZE);
 
-    // ==========================================
-    // 3. 유틸리티 함수 및 오디오
-    // ==========================================
     function showToast(message, type = 'normal') {
         const container = document.getElementById('toastContainer');
         const toast = document.createElement('div');
@@ -391,9 +361,6 @@
         };
     }
 
-    // ==========================================
-    // 4. 네트워크 및 인증 로직
-    // ==========================================
     function handleAuthError(res) {
         if(res.status === 401 || res.status === 403) {
             alert("인증이 만료되었습니다. 다시 로그인해주세요.");
@@ -423,7 +390,6 @@
             ui.profileNickname.textContent = GameState.nickname;
             ui.profileId.textContent = '@' + currentUsername;
 
-
             isAdmin = (userData.role === 'ADMIN');
             if (isAdmin) document.getElementById('adminTabBtn').style.display = 'block';
 
@@ -437,7 +403,7 @@
             }
 
             if (userData.unlockedColors) GameState.unlockedColors = new Set(userData.unlockedColors.split(',').filter(c => c));
-            else GameState.unlockedColors = new Set(CONFIG.PALETTE_COLORS.slice(0, 12));
+            else GameState.unlockedColors = new Set(CONFIG.PALETTE_COLORS.slice(1, 13));
 
             if (userData.unlockedBadges) {
                 GameState.unlockedBadges = new Set(userData.unlockedBadges.split(',').filter(b => b));
@@ -452,7 +418,7 @@
             } else {
                 currentQuota = userData.currentQuota; GameState.currentMaxQuota = userData.maxQuota; GameState.points = userData.points;
             }
-            currentColor = Array.from(GameState.unlockedColors)[0];
+            currentColor = CONFIG.PALETTE_COLORS[0];
             lastRegenTime = Date.now();
 
             initUI(); renderCanvas(); requestAnimationFrame(updateTimer); connectWebSocket();
@@ -468,14 +434,19 @@
                                 const [x, y] = key.split(':').map(Number);
                                 let color = value; let author = "Unknown";
                                 if (value && value.includes('|')) { const parts = value.split('|'); color = parts[0]; author = parts[1]; }
-                                backCtx.fillStyle = color; backCtx.fillRect(x, y, 1, 1); pixelMetadataMap.set(`${x},${y}`, author);
+                                if (color === 'transparent') {
+                                    backCtx.clearRect(x, y, 1, 1);
+                                } else {
+                                    backCtx.fillStyle = color;
+                                    backCtx.fillRect(x, y, 1, 1);
+                                }
+                                pixelMetadataMap.set(`${x},${y}`, author);
                             });
                             renderCanvas();
                         }).catch(() => {});
                 }
             }, 30000);
         } catch (error) {
-            console.error(error);
             if(error.message !== "Auth Failed") { sessionStorage.removeItem('username'); sessionStorage.removeItem('token'); window.location.href = '/login.html'; }
         }
     }
@@ -488,7 +459,7 @@
                 points: GameState.points, lastUpdateTime: Date.now(),
                 unlockedColors: Array.from(GameState.unlockedColors).join(','),
                 favoriteColors: Array.from(GameState.favoriteColors).join(','),
-                unlockedBadges: Array.from(GameState.unlockedBadges).join(',') // ✨ 추가됨!
+                unlockedBadges: Array.from(GameState.unlockedBadges).join(',')
             })
         }).then(res => { handleAuthError(res); if(res.ok && showNotification) showToast("서버 동기화 완료", "info"); }).catch(()=>{});
     }
@@ -525,30 +496,28 @@
         sessionStorage.removeItem('username'); sessionStorage.removeItem('token'); window.location.href = '/login.html';
     }
 
-    // ==========================================
-    // 5. 웹소켓 (STOMP) 연결
-    // ==========================================
     function connectWebSocket() {
         const socket = new SockJS('/ws-paint'); stompClient = Stomp.over(socket); stompClient.debug = null;
         stompClient.connect({}, () => {
             isConnected = true;
-
-            // 캔버스 변경사항 수신
             stompClient.subscribe('/topic/canvas', (msg) => {
                 JSON.parse(msg.body).forEach(data => {
                     setPixel(data.x, data.y, data.color, true);
                     for (let i = 0; i < data.size; i++) {
                         for (let j = 0; j < data.size; j++) {
-                            const px = data.x - Math.floor(data.size / 2) + i;
-                            const py = data.y - Math.floor(data.size / 2) + j;
-                            pixelMetadataMap.set(`${px},${py}`, data.author || "Unknown");
+                            const px = ((data.x - Math.floor(data.size / 2) + i) % CONFIG.MAP_SIZE + CONFIG.MAP_SIZE) % CONFIG.MAP_SIZE;
+                            const py = ((data.y - Math.floor(data.size / 2) + j) % CONFIG.MAP_SIZE + CONFIG.MAP_SIZE) % CONFIG.MAP_SIZE;
+                            if (data.color === 'transparent') {
+                                pixelMetadataMap.delete(`${px},${py}`);
+                            } else {
+                                pixelMetadataMap.set(`${px},${py}`, data.author || "Unknown");
+                            }
                         }
                     }
                 });
                 renderCanvas();
             });
 
-            // 접속자 명단 수신
             stompClient.subscribe('/topic/users', (msg) => {
                 const users = JSON.parse(msg.body);
                 document.getElementById('userCount').textContent = users.length;
@@ -557,7 +526,6 @@
 
             stompClient.send("/app/join", {}, GameState.nickname);
 
-            // 초기 캔버스 데이터 로드
             fetch('/api/canvas/snapshot', { headers: authHeaders })
                 .then(res => { handleAuthError(res); return res.json(); })
                 .then(data => {
@@ -565,7 +533,13 @@
                         const [x, y] = key.split(':').map(Number);
                         let color = value; let author = "Unknown";
                         if (value && value.includes('|')) { const parts = value.split('|'); color = parts[0]; author = parts[1]; }
-                        backCtx.fillStyle = color; backCtx.fillRect(x, y, 1, 1); pixelMetadataMap.set(`${x},${y}`, author);
+                        if (color === 'transparent') {
+                            backCtx.clearRect(x, y, 1, 1);
+                        } else {
+                            backCtx.fillStyle = color;
+                            backCtx.fillRect(x, y, 1, 1);
+                        }
+                        pixelMetadataMap.set(`${x},${y}`, author);
                     });
                     renderCanvas();
                 });
@@ -577,15 +551,12 @@
     window.addEventListener('beforeunload', () => { if (stompClient && isConnected) { stompClient.send("/app/leave", {}, GameState.nickname); stompClient.disconnect(); } });
     function flushPixelBuffer() {
         if (isConnected && stompClient && pixelBuffer.length > 0) {
-            // author만 전송
             pixelBuffer.forEach(p => p.author = currentUsername);
             stompClient.send("/app/draw", {}, JSON.stringify(pixelBuffer));
             pixelBuffer = [];
         }
     }
-    // ==========================================
-    // 6. UI 및 렌더링 로직
-    // ==========================================
+
     function setMode(mode) {
         currentMode = mode; const modes = ['Draw', 'Pan', 'Obs'];
         modes.forEach(m => {
@@ -616,49 +587,69 @@
         ui.displayCanvas.height = window.innerHeight;
 
         displayCtx.imageSmoothingEnabled = false;
-        displayCtx.fillStyle = "#111";
-        displayCtx.fillRect(0, 0, ui.displayCanvas.width, ui.displayCanvas.height);
+        displayCtx.clearRect(0, 0, ui.displayCanvas.width, ui.displayCanvas.height);
 
         const vw = ui.displayCanvas.width / zoom;
         const vh = ui.displayCanvas.height / zoom;
         const sx = camX - vw / 2;
         const sy = camY - vh / 2;
 
-        /* Draw Template or Default White Background */
-        if (showTemplate && templateImg.complete) {
-            displayCtx.drawImage(templateImg, sx, sy, vw, vh, 0, 0, ui.displayCanvas.width, ui.displayCanvas.height);
-        } else {
-            const screenX = -sx * zoom;
-            const screenY = -sy * zoom;
-            const screenW = CONFIG.MAP_SIZE * zoom;
-            const screenH = CONFIG.MAP_SIZE * zoom;
-            displayCtx.fillStyle = "#FFFFFF";
-            displayCtx.fillRect(screenX, screenY, screenW, screenH);
-        }
+        const startCol = Math.floor(sx / CONFIG.MAP_SIZE);
+        const endCol = Math.floor((sx + vw) / CONFIG.MAP_SIZE);
+        const startRow = Math.floor(sy / CONFIG.MAP_SIZE);
+        const endRow = Math.floor((sy + vh) / CONFIG.MAP_SIZE);
 
-        /* Draw User Pixels Over the Background */
-        displayCtx.drawImage(backCanvas, sx, sy, vw, vh, 0, 0, ui.displayCanvas.width, ui.displayCanvas.height);
+        for (let r = startRow; r <= endRow; r++) {
+            for (let c = startCol; c <= endCol; c++) {
+                const drawX = (c * CONFIG.MAP_SIZE - sx) * zoom;
+                const drawY = (r * CONFIG.MAP_SIZE - sy) * zoom;
+                const drawW = CONFIG.MAP_SIZE * zoom;
+                const drawH = CONFIG.MAP_SIZE * zoom;
+
+                if (showTemplate && templateImg.complete) {
+                    displayCtx.drawImage(templateImg, drawX, drawY, drawW, drawH);
+                }
+                displayCtx.drawImage(backCanvas, drawX, drawY, drawW, drawH);
+            }
+        }
     }
 
     function initUI() {
         ui.palette.innerHTML = ''; ui.favPalette.innerHTML = '';
         GameState.favoriteColors.forEach(color => {
             const btn = document.createElement('div'); btn.className = 'palette-btn';
-            btn.style.backgroundColor = color; btn.dataset.color = color;
-            if (color === currentColor) btn.classList.add('selected'); ui.favPalette.appendChild(btn);
+            btn.dataset.color = color;
+            if (color === 'transparent') {
+                btn.style.background = 'repeating-conic-gradient(#E0E0E0 0% 25%, #FFFFFF 0% 50%) 50% / 10px 10px';
+                btn.innerHTML = '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:10px; color:#000; font-weight:bold;">지우개</div>';
+            } else {
+                btn.style.backgroundColor = color;
+            }
+            if (color === currentColor) btn.classList.add('selected');
+            ui.favPalette.appendChild(btn);
         });
         CONFIG.PALETTE_COLORS.forEach(color => {
             const btn = document.createElement('div'); btn.className = 'palette-btn';
-            btn.style.backgroundColor = color; btn.dataset.color = color;
-            if (GameState.unlockedColors.has(color)) { if (color === currentColor) btn.classList.add('selected'); }
-            else { btn.classList.add('locked'); }
+            btn.dataset.color = color;
+            if (color === 'transparent') {
+                btn.style.background = 'repeating-conic-gradient(#E0E0E0 0% 25%, #FFFFFF 0% 50%) 50% / 10px 10px';
+                btn.innerHTML = '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:10px; color:#000; font-weight:bold;">지우개</div>';
+            } else {
+                btn.style.backgroundColor = color;
+            }
+
+            if (GameState.unlockedColors.has(color) || color === 'transparent') {
+                if (color === currentColor) btn.classList.add('selected');
+            } else {
+                btn.classList.add('locked');
+            }
             ui.palette.appendChild(btn);
         });
         updateFavToggleBtnUI(); updateTopStatusUI(); renderMissions();
     }
 
     function toggleFavoriteCurrentColor() {
-        if (!GameState.unlockedColors.has(currentColor)) return showToast("해금되지 않은 색상은 즐겨찾기할 수 없습니다.");
+        if (!GameState.unlockedColors.has(currentColor) && currentColor !== 'transparent') return showToast("해금되지 않은 색상은 즐겨찾기할 수 없습니다.");
         if (GameState.favoriteColors.has(currentColor)) { GameState.favoriteColors.delete(currentColor); showToast("즐겨찾기에서 제거되었습니다."); }
         else { GameState.favoriteColors.add(currentColor); showToast("즐겨찾기에 추가되었습니다.", "success"); }
         syncUserData(false); initUI();
@@ -688,7 +679,6 @@
 
                 if (m.current >= m.target) {
                     m.current = m.target; m.completed = true; GameState.points += m.reward;
-
                     let toastMsg = `🎉 미션 완료: ${m.title}! (+${m.reward}P)`;
 
                     if (m.badgeReward && !GameState.unlockedBadges.has(m.badgeReward)) {
@@ -702,7 +692,7 @@
 
                     showToast(toastMsg, "success");
                     updateTopStatusUI();
-                    syncUserData(false); //획득했으니 서버에 즉시 저장
+                    syncUserData(false);
                 }
                 updated = true;
             }
@@ -721,14 +711,16 @@
         GameState.points -= 150; GameState.currentMaxQuota += 50; currentQuota += 50; updateTopStatusUI(); showToast("최대 보유량이 증가했습니다!", "success");
     }
 
-    // ==========================================
-    // 7. 핵심 드로잉 및 팔레트 로직
-    // ==========================================
     function triggerUndo() {
         if (undoHistory.length === 0) return showToast("되돌릴 작업이 없습니다.");
         const action = undoHistory.pop();
         action.pixels.forEach(p => {
-            backCtx.fillStyle = p.oldColor; backCtx.fillRect(p.px, p.py, 1, 1);
+            if (p.oldColor === 'transparent') {
+                backCtx.clearRect(p.px, p.py, 1, 1);
+            } else {
+                backCtx.fillStyle = p.oldColor;
+                backCtx.fillRect(p.px, p.py, 1, 1);
+            }
             if (isConnected) pixelBuffer.push({ x: p.px, y: p.py, color: p.oldColor, size: 1, author: GameState.nickname });
         });
         currentQuota = Math.min(GameState.currentMaxQuota, currentQuota + action.quotaCost); updateTopStatusUI();
@@ -736,33 +728,107 @@
         renderCanvas(); showToast("실행이 취소되어 서버에 반영되었습니다.", "info");
     }
 
-    function setPixel(x, y, color, isRemote = false) {
-        if (x < 0 || x >= CONFIG.MAP_SIZE || y < 0 || y >= CONFIG.MAP_SIZE) return;
-        const offset = Math.floor(currentSize / 2); const startX = x - offset, startY = y - offset; const targetColorUpper = color.toUpperCase();
+    function setPixel(absX, absY, color, isRemote = false) {
+        const offset = Math.floor(currentSize / 2);
+        let targetColorUpper = color === 'transparent' ? 'transparent' : color.toUpperCase();
 
-        if (isRemote) { backCtx.fillStyle = color; backCtx.fillRect(startX, startY, currentSize, currentSize); return; }
+        const wCenterX = ((absX % CONFIG.MAP_SIZE) + CONFIG.MAP_SIZE) % CONFIG.MAP_SIZE;
+        const wCenterY = ((absY % CONFIG.MAP_SIZE) + CONFIG.MAP_SIZE) % CONFIG.MAP_SIZE;
+        const startX = wCenterX - offset;
+        const startY = wCenterY - offset;
 
-        let actualCost = 0; const validPixels = []; const existingData = backCtx.getImageData(startX, startY, currentSize, currentSize).data;
-        for (let i = 0; i < currentSize; i++) {
-            for (let j = 0; j < currentSize; j++) {
-                const px = startX + i, py = startY + j;
-                if (px < 0 || px >= CONFIG.MAP_SIZE || py < 0 || py >= CONFIG.MAP_SIZE) continue;
-                const pixelKey = px + "," + py; if (currentStrokeCoords.has(pixelKey)) continue;
-                const dataIdx = (j * currentSize + i) * 4;
-                const oldColor = existingData[dataIdx+3] === 0 ? '#FFFFFF' : rgbToHex(existingData[dataIdx], existingData[dataIdx+1], existingData[dataIdx+2]);
-                if (oldColor === targetColorUpper) continue;
-                currentStrokeCoords.add(pixelKey); validPixels.push({px, py, oldColor}); actualCost++;
+        if (isRemote) {
+            for (let i = 0; i < currentSize; i++) {
+                for (let j = 0; j < currentSize; j++) {
+                    const px = ((startX + i) % CONFIG.MAP_SIZE + CONFIG.MAP_SIZE) % CONFIG.MAP_SIZE;
+                    const py = ((startY + j) % CONFIG.MAP_SIZE + CONFIG.MAP_SIZE) % CONFIG.MAP_SIZE;
+                    if (color === 'transparent') {
+                        backCtx.clearRect(px, py, 1, 1);
+                    } else {
+                        backCtx.fillStyle = color;
+                        backCtx.fillRect(px, py, 1, 1);
+                    }
+                }
+            }
+            return;
+        }
+
+        let actualCost = 0;
+        const validPixels = [];
+        const crossesBoundary = (startX < 0 || startY < 0 || startX + currentSize > CONFIG.MAP_SIZE || startY + currentSize > CONFIG.MAP_SIZE);
+
+        if (!crossesBoundary) {
+            const existingData = backCtx.getImageData(startX, startY, currentSize, currentSize).data;
+            for (let i = 0; i < currentSize; i++) {
+                for (let j = 0; j < currentSize; j++) {
+                    const px = startX + i;
+                    const py = startY + j;
+                    const pixelKey = px + "," + py;
+                    if (currentStrokeCoords.has(pixelKey)) continue;
+
+                    const dataIdx = (j * currentSize + i) * 4;
+                    const alpha = existingData[dataIdx+3];
+                    const oldColor = alpha === 0 ? 'transparent' : rgbToHex(existingData[dataIdx], existingData[dataIdx+1], existingData[dataIdx+2]);
+
+                    if (oldColor === targetColorUpper) continue;
+
+                    currentStrokeCoords.add(pixelKey);
+                    validPixels.push({px, py, oldColor});
+                    actualCost++;
+                }
+            }
+        } else {
+            for (let i = 0; i < currentSize; i++) {
+                for (let j = 0; j < currentSize; j++) {
+                    const px = ((startX + i) % CONFIG.MAP_SIZE + CONFIG.MAP_SIZE) % CONFIG.MAP_SIZE;
+                    const py = ((startY + j) % CONFIG.MAP_SIZE + CONFIG.MAP_SIZE) % CONFIG.MAP_SIZE;
+                    const pixelKey = px + "," + py;
+                    if (currentStrokeCoords.has(pixelKey)) continue;
+
+                    const existingData = backCtx.getImageData(px, py, 1, 1).data;
+                    const alpha = existingData[3];
+                    const oldColor = alpha === 0 ? 'transparent' : rgbToHex(existingData[0], existingData[1], existingData[2]);
+
+                    if (oldColor === targetColorUpper) continue;
+
+                    currentStrokeCoords.add(pixelKey);
+                    validPixels.push({px, py, oldColor});
+                    actualCost++;
+                }
             }
         }
+
         if (actualCost === 0) return;
-        if (currentQuota < actualCost) { validPixels.length = currentQuota; actualCost = currentQuota; if (actualCost === 0) return; }
-        if (currentAction !== null) { validPixels.forEach(p => currentAction.pixels.push({ px: p.px, py: p.py, oldColor: p.oldColor })); currentAction.quotaCost += actualCost; }
 
-        if (isConnected && stompClient) pixelBuffer.push({ x: x, y: y, color: color, size: currentSize });
-        currentQuota -= actualCost; GameState.pixelsDrawn += actualCost; GameState.uniqueColorsUsed.add(color);
-        updateTopStatusUI(); checkMissions('draw');
+        if (currentQuota < actualCost) {
+            validPixels.length = currentQuota;
+            actualCost = currentQuota;
+            if (actualCost === 0) return;
+        }
 
-        backCtx.fillStyle = color; for (let i = 0; i < validPixels.length; i++) backCtx.fillRect(validPixels[i].px, validPixels[i].py, 1, 1);
+        if (currentAction !== null) {
+            validPixels.forEach(p => currentAction.pixels.push({ px: p.px, py: p.py, oldColor: p.oldColor }));
+            currentAction.quotaCost += actualCost;
+        }
+
+        if (isConnected && stompClient) {
+            pixelBuffer.push({ x: wCenterX, y: wCenterY, color: color, size: currentSize });
+        }
+
+        currentQuota -= actualCost;
+        GameState.pixelsDrawn += actualCost;
+        if (color !== 'transparent') GameState.uniqueColorsUsed.add(color);
+        updateTopStatusUI();
+        checkMissions('draw');
+
+        for (let i = 0; i < validPixels.length; i++) {
+            if (color === 'transparent') {
+                backCtx.clearRect(validPixels[i].px, validPixels[i].py, 1, 1);
+            } else {
+                backCtx.fillStyle = color;
+                backCtx.fillRect(validPixels[i].px, validPixels[i].py, 1, 1);
+            }
+        }
         playDrawSound();
     }
 
@@ -778,7 +844,7 @@
         const targetBtn = e.target.closest('.palette-btn');
         if (targetBtn) {
             const clickedColor = targetBtn.dataset.color;
-            if (!GameState.unlockedColors.has(clickedColor)) {
+            if (!GameState.unlockedColors.has(clickedColor) && clickedColor !== 'transparent') {
                 if (confirm(`이 색상을 해금하시겠습니까? (비용: ${CONFIG.UNLOCK_COST}P)`)) {
                     if (GameState.points >= CONFIG.UNLOCK_COST) { GameState.points -= CONFIG.UNLOCK_COST; GameState.unlockedColors.add(clickedColor); syncUserData(false); updateTopStatusUI(); initUI(); showToast("새로운 색상이 해금되었습니다!", "success"); }
                     else showToast("포인트가 부족합니다.");
@@ -786,13 +852,13 @@
             }
             currentColor = clickedColor; document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('selected'));
             document.querySelectorAll(`.palette-btn[data-color="${currentColor}"]`).forEach(b => b.classList.add('selected'));
-            GameState.uniqueColorsUsed.add(currentColor); checkMissions('color'); updateFavToggleBtnUI();
+            if (currentColor !== 'transparent') {
+                GameState.uniqueColorsUsed.add(currentColor); checkMissions('color');
+            }
+            updateFavToggleBtnUI();
         }
     };
 
-    // ==========================================
-    // 8. 마우스, 터치 및 키보드 이벤트 리스너
-    // ==========================================
     ui.palette.addEventListener('click', handlePaletteClick);
     ui.favPalette.addEventListener('click', handlePaletteClick);
     document.getElementById('brushSize').addEventListener('input', (e) => { currentSize = parseInt(e.target.value, 10); ui.brushSizeVal.textContent = currentSize; });
@@ -801,7 +867,7 @@
         initAudio(); if (isSidebarOpen && window.innerWidth <= 768) toggleSidebar();
         const c = getCoords(e.clientX, e.clientY);
         if (currentMode === 'observe' && e.button === 0) {
-            const author = pixelMetadataMap.get(`${c.mx},${c.my}`);
+            const author = pixelMetadataMap.get(`${((c.mx % CONFIG.MAP_SIZE) + CONFIG.MAP_SIZE) % CONFIG.MAP_SIZE},${((c.my % CONFIG.MAP_SIZE) + CONFIG.MAP_SIZE) % CONFIG.MAP_SIZE}`);
             if (author) showToast(`[${c.mx}, ${c.my}] 🎨 작성자: ${author}`, "info"); else showToast("아직 아무도 칠하지 않은 픽셀입니다."); return;
         }
         if (currentMode === 'draw' && e.button === 0) {
@@ -819,7 +885,6 @@
             drawLine(lastMapX, lastMapY, c.mx, c.my, currentColor); lastMapX = c.mx; lastMapY = c.my; renderCanvas();
         } else if (isPanning) {
             camX -= (e.clientX - lastMouseX) / zoom; camY -= (e.clientY - lastMouseY) / zoom;
-            camX = Math.max(0, Math.min(CONFIG.MAP_SIZE, camX)); camY = Math.max(0, Math.min(CONFIG.MAP_SIZE, camY));
             lastMouseX = e.clientX; lastMouseY = e.clientY; renderCanvas();
         }
     });
@@ -830,7 +895,7 @@
     });
 
     ui.displayCanvas.addEventListener('wheel', (e) => {
-        e.preventDefault(); const oldZoom = zoom; zoom *= (e.deltaY > 0) ? (1 / 1.1) : 1.1; zoom = Math.max(0.5, Math.min(50.0, zoom));
+        e.preventDefault(); const oldZoom = zoom; zoom *= (e.deltaY > 0) ? (1 / 1.1) : 1.1; zoom = Math.max(0.4, Math.min(50.0, zoom));
         const vw = ui.displayCanvas.width / zoom; camX += ((camX - vw/2 + e.clientX/zoom) - camX) * (oldZoom/zoom - 1);
         ui.zoom.textContent = zoom.toFixed(1); renderCanvas();
     }, { passive: false });
@@ -840,7 +905,7 @@
         if (e.touches.length === 1) {
             const c = getCoords(e.touches[0].clientX, e.touches[0].clientY);
             if (currentMode === 'observe') {
-                const author = pixelMetadataMap.get(`${c.mx},${c.my}`);
+                const author = pixelMetadataMap.get(`${((c.mx % CONFIG.MAP_SIZE) + CONFIG.MAP_SIZE) % CONFIG.MAP_SIZE},${((c.my % CONFIG.MAP_SIZE) + CONFIG.MAP_SIZE) % CONFIG.MAP_SIZE}`);
                 if (author) showToast(`[${c.mx}, ${c.my}] 🎨 작성자: ${author}`, "info"); else showToast("아직 아무도 칠하지 않은 픽셀입니다."); return;
             }
             if (currentMode === 'draw') {
@@ -865,12 +930,11 @@
                 drawLine(lastMapX, lastMapY, c.mx, c.my, currentColor); lastMapX = c.mx; lastMapY = c.my; renderCanvas();
             } else if (isPanning) {
                 camX -= (e.touches[0].clientX - lastMouseX) / zoom; camY -= (e.touches[0].clientY - lastMouseY) / zoom;
-                camX = Math.max(0, Math.min(CONFIG.MAP_SIZE, camX)); camY = Math.max(0, Math.min(CONFIG.MAP_SIZE, camY));
                 lastMouseX = e.touches[0].clientX; lastMouseY = e.touches[0].clientY; renderCanvas();
             }
         } else if (e.touches.length === 2 && isPinching) {
             const dist = Math.sqrt(Math.pow(e.touches[0].clientX - e.touches[1].clientX, 2) + Math.pow(e.touches[0].clientY - e.touches[1].clientY, 2));
-            const oldZoom = zoom; zoom *= (dist / initialPinchDistance); zoom = Math.max(0.5, Math.min(50.0, zoom));
+            const oldZoom = zoom; zoom *= (dist / initialPinchDistance); zoom = Math.max(0.4, Math.min(50.0, zoom));
             const pinchCenterX = (e.touches[0].clientX + e.touches[1].clientX) / 2; const vw = ui.displayCanvas.width / zoom;
             camX += ((camX - vw/2 + pinchCenterX/zoom) - camX) * (oldZoom/zoom - 1);
             initialPinchDistance = dist; ui.zoom.textContent = zoom.toFixed(1); renderCanvas();
@@ -886,21 +950,21 @@
     window.addEventListener('keydown', (e) => { if (e.ctrlKey && e.key.toLowerCase() === 'z') { e.preventDefault(); triggerUndo(); } });
     window.addEventListener('resize', renderCanvas);
     ui.displayCanvas.addEventListener('contextmenu', (e) => {
-        e.preventDefault(); // 기본 우클릭 메뉴 방지
+        e.preventDefault();
 
         const now = Date.now();
         const c = getCoords(e.clientX, e.clientY);
+        const wX = ((c.mx % CONFIG.MAP_SIZE) + CONFIG.MAP_SIZE) % CONFIG.MAP_SIZE;
+        const wY = ((c.my % CONFIG.MAP_SIZE) + CONFIG.MAP_SIZE) % CONFIG.MAP_SIZE;
 
-        // 더블 우클릭 감지 (500ms 이내에 같은 좌표 근처 우클릭 시)
         if (now - lastRightClickTime < 500 &&
             Math.abs(lastRightClickCoords.x - c.mx) < 2 &&
             Math.abs(lastRightClickCoords.y - c.my) < 2) {
 
-            showArtistDetail(c.mx, c.my); // 상세 카드 띄우기
+            showArtistDetail(wX, wY);
 
         } else {
-            // 단일 우클릭: 기존처럼 간단 토스트 메시지
-            const authorId = pixelMetadataMap.get(`${c.mx},${c.my}`);
+            const authorId = pixelMetadataMap.get(`${wX},${wY}`);
             if (authorId && authorId !== "Unknown" && authorId !== "null" && authorId !== "undefined") {
                 showToast(`🎨 작성자 ID: @${authorId}`, "info");
             } else {
@@ -925,7 +989,6 @@
 
             const data = await res.json();
 
-            // 불러온 데이터로 카드 채우기
             const nickname = data.nickname || targetUsername;
             const title = data.title || "title";
             const badges = data.badges || "badges";
@@ -934,7 +997,6 @@
             document.getElementById('cardId').textContent = `@${targetUsername}`;
             document.getElementById('cardTitle').textContent = title;
 
-            // 배지 설정
             const badgeBox = document.getElementById('cardBadges');
             badgeBox.innerHTML = '';
             badges.split(',').forEach(b => {
@@ -945,7 +1007,6 @@
                 badgeBox.appendChild(span);
             });
 
-            // 프로필 설정
             const avatar = document.getElementById('cardAvatar');
             if (data.profileIconBase64) {
                 avatar.innerHTML = `<img src="${data.profileIconBase64}" style="width:100%; height:100%; object-fit:cover;">`;
@@ -953,7 +1014,6 @@
                 avatar.innerHTML = `<div style="line-height:80px; font-size:30px; background:#444; color:#fff;">${nickname[0]}</div>`;
             }
 
-            // 카드 보여주기
             document.getElementById('artistCard').classList.add('show');
 
         } catch (error) {
@@ -961,9 +1021,6 @@
         }
     }
 
-    // ==========================================
-    // 9. 타이머 및 앱 초기화 실행
-    // ==========================================
     function updateTimer() {
         if (currentQuota < GameState.currentMaxQuota) {
             const elapsed = Date.now() - lastRegenTime;
@@ -977,7 +1034,6 @@
         requestAnimationFrame(updateTimer);
     }
 
-    // 카드 관련
     let lastRightClickTime = 0;
     let lastRightClickCoords = { x: -1, y: -1 };
 
@@ -985,11 +1041,8 @@
         document.getElementById('artistCard').classList.remove('show');
     }
 
-    // 앱 시작점
     initializeApp();
 </script>
-
-
 
 </body>
 </html>
