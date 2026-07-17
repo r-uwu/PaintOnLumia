@@ -1,55 +1,44 @@
 package org.example.paintonlumia.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.example.paintonlumia.entity.CanvasArchiveEntity;
-import org.example.paintonlumia.entity.UserEntity;
-import org.example.paintonlumia.repository.CanvasArchiveRepository;
-import org.example.paintonlumia.repository.CanvasRepository;
-import org.example.paintonlumia.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
+import org.example.paintonlumia.dto.ChunkImportRequest;
+import org.example.paintonlumia.service.CanvasArchiveService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin")
-@RequiredArgsConstructor
 public class AdminController {
 
-    private final UserRepository userRepository;
-    private final CanvasRepository canvasRepository;
-    private final CanvasArchiveRepository archiveRepository;
-    private final ObjectMapper objectMapper;
+    private final CanvasArchiveService archiveService;
+
+    public AdminController(CanvasArchiveService archiveService) {
+        this.archiveService = archiveService;
+    }
 
     @PostMapping("/archive")
-    public ResponseEntity<?> createArchive(@RequestParam String username, @RequestParam String archiveName) {
-        // 1. 관리자 권한 검증
-        UserEntity user = userRepository.findById(username).orElse(null);
-        if (user == null || !"ADMIN".equals(user.getRole())) {
-            return ResponseEntity.status(403).body("관리자 권한이 없습니다.");
-        }
-
+    public ResponseEntity<String> createArchive(@RequestParam String username, @RequestParam String archiveName) {
         try {
-            // 2. 현재 Redis의 캔버스 데이터 조회
-            Map<String, String> currentCanvas = canvasRepository.getCanvasSnapshot();
-
-            // 3. 데이터를 JSON 문자열로 압축(직렬화)
-            String snapshotJson = objectMapper.writeValueAsString(currentCanvas);
-
-            // 4. 아카이브 DB에 저장
-            CanvasArchiveEntity archive = new CanvasArchiveEntity();
-            archive.setArchiveName(archiveName);
-            archive.setArchivedBy(username);
-            archive.setSnapshotData(snapshotJson);
-            archive.setCreatedAt(System.currentTimeMillis());
-
-            archiveRepository.save(archive);
-
-            return ResponseEntity.ok("캔버스 아카이브 [" + archiveName + "] 저장이 완료되었습니다.");
-
+            archiveService.createArchive(archiveName, username);
+            return ResponseEntity.ok("아카이브가 성공적으로 생성되었습니다.");
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("아카이브 저장 중 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/archives")
+    public ResponseEntity<List<String>> getArchives() {
+        return ResponseEntity.ok(archiveService.getAllArchiveNames());
+    }
+
+    @PostMapping("/import-chunk")
+    public ResponseEntity<String> importChunk(@RequestBody ChunkImportRequest request) {
+        try {
+            archiveService.importChunkToLiveCanvas(request);
+            return ResponseEntity.ok("지정된 영역의 데이터가 성공적으로 복원되었습니다.");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(e.getMessage());
         }
     }
 }
