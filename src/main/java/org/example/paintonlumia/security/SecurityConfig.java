@@ -32,7 +32,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 로그인, 회원가입, 정적 리소스(HTML, CSS, JS), 웹소켓, 갤러리는 모두에게 허용
                         .requestMatchers("/api/auth/**", "/api/archive/public/**", "/ws-paint/**").permitAll()
-                        .requestMatchers("/", "/*.html", "/favicon.ico", "/css/**", "/js/**", "/images/**").permitAll()
+                        .requestMatchers("/", "/*.html", "/*.png", "/favicon.ico", "/css/**", "/js/**", "/images/**").permitAll()
                         .requestMatchers("/phpmyadmin/**").permitAll()
 
                         // 관리자 API는 ADMIN 권한만 허용 (추후 역할 기반 제어시 사용)

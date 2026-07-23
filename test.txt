@@ -1,0 +1,16 @@
+
+cd C:\Users\User\workspace\PaintOnLumia
+
+ngrok http 8080
+
+https://perjury-connected-fretful.ngrok-free.dev/index.html
+
+
+=====
+
+
+Redis 서버 완전 재시작
+
+
+cd C:\Users\User\Downloads\Redis-x64-5.0.14.1
+redis-server.exe --dir . --dbfilename dump.rdb
