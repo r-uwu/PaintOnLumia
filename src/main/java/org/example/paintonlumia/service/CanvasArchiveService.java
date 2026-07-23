@@ -57,7 +57,7 @@ public class CanvasArchiveService {
 
         // JSON 스냅샷 데이터를 Map으로 역직렬화
         Map<String, String> snapshotData = objectMapper.readValue(
-                archive.getPixelDataSnapshot(),
+                archive.getSnapshotData(),
                 new TypeReference<Map<String, String>>() {}
         );
 
