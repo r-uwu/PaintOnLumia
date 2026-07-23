@@ -36,6 +36,12 @@ public class UserEntity {
     @Column(columnDefinition = "TEXT")
     private String favoriteColors;
 
+    @Column(name = "pixels_drawn", nullable = false)
+    private int pixelsDrawn = 0;
+
+    @Column(name = "completed_mission_ids", length = 255)
+    private String completedMissionIds = "";
+
     private int currentQuota;
     private int maxQuota;
     private int points;

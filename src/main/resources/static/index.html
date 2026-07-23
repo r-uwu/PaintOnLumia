@@ -488,22 +488,57 @@
                         }).catch(() => {});
                 }
             }, 30000);
+
+            GameState.pixelsDrawn = userData.pixelsDrawn || 0;
+
+            const completedIds = new Set();
+            if (userData.completedMissionIds) {
+                userData.completedMissionIds.split(',').forEach(id => completedIds.add(parseInt(id, 10)));
+            }
+
+            Missions.forEach(m => {
+                if (completedIds.has(m.id)) {
+                    m.completed = true;
+                    m.current = m.target;
+                } else {
+                    if (m.type === 'draw') {
+                        m.current = GameState.pixelsDrawn;
+                    } else if (m.type === 'color') {
+                        m.current = GameState.uniqueColorsUsed.size;
+                    }
+                }
+            });
+
+            // Call renderMissions to update the UI immediately
+            renderMissions();
         } catch (error) {
             if(error.message !== "Auth Failed") { sessionStorage.removeItem('username'); sessionStorage.removeItem('token'); window.location.href = '/login.html'; }
         }
     }
 
     function syncUserData(showNotification = false) {
+        const completedMissionIds = Missions.filter(m => m.completed).map(m => m.id).join(',');
+
         fetch('/api/user/sync', {
             method: 'POST', headers: authHeaders,
             body: JSON.stringify({
-                username: currentUsername, currentQuota: currentQuota, maxQuota: GameState.currentMaxQuota,
-                points: GameState.points, lastUpdateTime: Date.now(),
+                username: currentUsername,
+                currentQuota: currentQuota,
+                maxQuota: GameState.currentMaxQuota,
+                points: GameState.points,
+                lastUpdateTime: Date.now(),
                 unlockedColors: Array.from(GameState.unlockedColors).join(','),
                 favoriteColors: Array.from(GameState.favoriteColors).join(','),
-                unlockedBadges: Array.from(GameState.unlockedBadges).join(',')
+                unlockedBadges: Array.from(GameState.unlockedBadges).join(','),
+
+                // Add new fields for mission persistence
+                pixelsDrawn: GameState.pixelsDrawn,
+                completedMissionIds: completedMissionIds
             })
-        }).then(res => { handleAuthError(res); if(res.ok && showNotification) showToast("서버 동기화 완료", "info"); }).catch(()=>{});
+        }).then(res => {
+            handleAuthError(res);
+            if(res.ok && showNotification) showToast("서버 동기화 완료", "info");
+        }).catch(()=>{});
     }
 
     async function executeManualArchive() {
